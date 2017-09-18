@@ -254,24 +254,17 @@ _validate_mpr_set(const struct nhdp_domain *domain, struct neighbor_graph *graph
   /* 
    * First property: If x in N1 has W(x) = WILL_ALWAYS then x is in M. 
    */
-  avl_for_each_element(&graph->set_n1, node_n1, _avl_node) {
-    if (domain == nhdp_domain_get_flooding_domain()) {
-      if (node_n1->link->flooding_willingness
+  avl_for_each_element(&graph->set_n1, node_n1,
+                       _avl_node)
+  {
+     if (node_n1->link->flooding_willingness
             == RFC7181_WILLINGNESS_ALWAYS) {
-        assert(mpr_is_mpr(graph, &node_n1->addr));
-      }
-    }
-    else {
-      struct nhdp_neighbor_domaindata *neighdata;
-
-      neighdata = nhdp_domain_get_neighbordata(domain, node_n1->neigh);
-      if (neighdata->willingness == RFC7181_WILLINGNESS_ALWAYS) {
-        assert(mpr_is_mpr(graph, &node_n1->addr));
-      }
+      assert(mpr_is_mpr(graph, &node_n1->addr));
     }
   }
 
-  avl_for_each_element(&graph->set_n2, n2_addr, _avl_node) {
+  avl_for_each_element(&graph->set_n2, n2_addr, _avl_node)
+  {
     d_y_n1 = mpr_calculate_d_of_y_s(domain, graph, n2_addr, &graph->set_n1);
     d_y_mpr = mpr_calculate_d_of_y_s(domain, graph, n2_addr, &graph->set_mpr);
     
