@@ -224,8 +224,8 @@ _send_tc(int af_type) {
 
 /**
  * Callback for rfc5444 writer to add message header for tc
- * @param writer
- * @param message
+ * @param writer RFC5444 writer instance
+ * @param message RFC5444 message that is generated
  */
 static int
 _cb_addMessageHeader(struct rfc5444_writer *writer,
@@ -264,7 +264,7 @@ _cb_finishMessageHeader(struct rfc5444_writer *writer,
 
 /**
  * Callback for rfc5444 writer to add message tlvs to tc
- * @param writer
+ * @param writer RFC5444 writer instance
  */
 static void
 _cb_addMessageTLVs(struct rfc5444_writer *writer) {
@@ -372,7 +372,7 @@ _generate_neighbor_metric_tlvs(struct rfc5444_writer *writer,
 
 /**
  * Callback for rfc5444 writer to add addresses and addresstlvs to tc
- * @param writer
+ * @param writer RFC5444 writer instance
  */
 static void
 _cb_addAddresses(struct rfc5444_writer *writer) {
@@ -553,10 +553,10 @@ _cb_addAddresses(struct rfc5444_writer *writer) {
 
 /**
  * Callback triggered when tc is finished.
- * @param writer
- * @param start
- * @param end
- * @param complete
+ * @param writer RFC5444 writer instance
+ * @param start first address contained in generated message
+ * @param end last address contained in generated message
+ * @param complete true if all addresses are in message, false otherwise
  */
 static void
 _cb_finishMessageTLVs(struct rfc5444_writer *writer,

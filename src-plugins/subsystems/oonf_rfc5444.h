@@ -324,7 +324,7 @@ oonf_rfc5444_get_target_from_writer(struct rfc5444_writer *writer) {
 }
 
 /**
- * @param writer pointer to rfc5444 target
+ * @param target rfc5444 writer target
  * @return pointer to oonf_rfc5444 target
  */
 static INLINE struct oonf_rfc5444_target *
@@ -385,7 +385,7 @@ oonf_rfc5444_remove_protocol_pktseqno(struct oonf_rfc5444_protocol *protocol) {
 
 /**
  * Request packet sequence number for a target
- * @param protocol pointer to rfc5444 protocol instance
+ * @param target rfc5444 target
  */
 static INLINE void
 oonf_rfc5444_add_target_pktseqno(struct oonf_rfc5444_target *target) {
@@ -394,7 +394,7 @@ oonf_rfc5444_add_target_pktseqno(struct oonf_rfc5444_target *target) {
 
 /**
  * Release the request for a packet sequence number for a target
- * @param protocol pointer to rfc5444 protocol instance
+ * @param target rfc5444 target
  */
 static INLINE void
 oonf_rfc5444_remove_target_pktseqno(struct oonf_rfc5444_target *target) {

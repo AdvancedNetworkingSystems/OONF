@@ -95,10 +95,8 @@ nhdp_hysteresis_get_handler(void) {
 
 /**
  * Dummy function for hysteresis update (does nothing)
- * @param lnk
- * @param context
- * @param vtime
- * @param itime
+ * @param lnk NHDP link
+ * @param context RFC5444 tlvblock reader context
  */
 static void
 _update_hysteresis(struct nhdp_link *lnk __attribute__((unused)),

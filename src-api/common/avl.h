@@ -181,21 +181,6 @@ avl_is_node_added(const struct avl_node *node) {
 }
 
 /**
- * Legacy function for code that still use the old avl_delete
- * function instead of the new avl_remove one.
- *
- * Use avl_remove() !
- *
- * Remove a node from an avl tree
- * @param tree pointer to tree
- * @param node pointer to node
- */
-static INLINE void __attribute__((deprecated))
-avl_delete(struct avl_tree *tree, struct avl_node *node) {
-  avl_remove(tree, node);
-}
-
-/**
  * @param tree pointer to avl-tree
  * @param key pointer to key
  * @param element pointer to a node element

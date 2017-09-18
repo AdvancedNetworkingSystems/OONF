@@ -117,6 +117,7 @@ void
 oonf_class_add(struct oonf_class *ci)
 {
   assert (ci->name);
+  assert (ci->name[0]);
 
   /* round up size to make block extendable */
   ci->total_size = _roundup(ci->size);

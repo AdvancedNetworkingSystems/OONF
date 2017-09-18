@@ -53,6 +53,7 @@
 #include "rfc5444/rfc5444_writer.h"
 #include "cunit/cunit.h"
 
+#if 0
 uint8_t result[] = {
     0x00, 0x01, 0x03, 0x00, 0x28, 0x00, 0x00, 0x04,
     0x80, 0x01, 0x0a, 0x01, 0x00, 0x65, 0x01, 0x00,
@@ -61,57 +62,7 @@ uint8_t result[] = {
     0x02, 0x03, 0x01, 0x01, 0x02, 0x50, 0x01, 0x01,
     0x00
 };
-
-/*
-0000: 00010300 28000004 80010a01 00650100 66010067 0b0b0b00 10035000 01010330
-0020: 02030101 02500101 00
-
-        ,------------------
-        |  PACKET
-        |------------------
-        | * Packet version:    0
-        | * Packet flags:      0x0
-        |    ,-------------------
-        |    |  MESSAGE
-        |    |-------------------
-        |    | * Message type:       1
-        |    | * Message flags:      0x00
-        |    | * Address length:     4
-        |    |    ,-------------------
-        |    |    |  Address: 10.1.0.101/32
-        |    |    |    | - TLV
-        |    |    |    |     Flags = 0x50
-        |    |    |    |     Type = 3
-        |    |    |    |     Value length: 1
-        |    |    |    |       0000: 01
-        |    |    `-------------------
-        |    |    ,-------------------
-        |    |    |  Address: 10.1.0.102/32
-        |    |    |    | - TLV
-        |    |    |    |     Flags = 0x50
-        |    |    |    |     Type = 2
-        |    |    |    |     Value length: 1
-        |    |    |    |       0000: 00
-        |    |    `-------------------
-        |    |    ,-------------------
-        |    |    |  Address: 10.1.0.103/32
-        |    |    |    | - TLV
-        |    |    |    |     Flags = 0x30
-        |    |    |    |     Type = 3
-        |    |    |    |     Value length: 1
-        |    |    |    |       0000: 01
-        |    |    `-------------------
-        |    |    ,-------------------
-        |    |    |  Address: 10.11.11.11/32
-        |    |    |    | - TLV
-        |    |    |    |     Flags = 0x30
-        |    |    |    |     Type = 3
-        |    |    |    |     Value length: 1
-        |    |    |    |       0000: 01
-        |    |    `-------------------
-        |    `-------------------
-        `------------------
- */
+#endif
 
 #define MSG_TYPE 1
 
@@ -119,8 +70,8 @@ static void write_packet(struct rfc5444_writer *,
     struct rfc5444_writer_target *, void *, size_t);
 static void addAddresses(struct rfc5444_writer *wr);
 
-static uint8_t msg_buffer[128];
-static uint8_t msg_addrtlvs[1000];
+static uint8_t msg_buffer[1500];
+static uint8_t msg_addrtlvs[1500];
 
 static struct rfc5444_writer writer = {
   .msg_buffer = msg_buffer,
@@ -135,11 +86,11 @@ static struct rfc5444_writer_content_provider cpr = {
 };
 
 static struct rfc5444_writer_tlvtype addrtlvs[] = {
-    { .type = 2 },
-    { .type = 3 },
+    { .type = 4 },
+    { .type = 7 },
 };
 
-static uint8_t packet_buffer_if[128];
+static uint8_t packet_buffer_if[1500];
 static struct rfc5444_writer_target out_if = {
   .packet_buffer = packet_buffer_if,
   .packet_size = sizeof(packet_buffer_if),
@@ -152,29 +103,30 @@ static int addMessageHeader(struct rfc5444_writer *wr, struct rfc5444_writer_mes
 }
 
 static void addAddresses(struct rfc5444_writer *wr) {
-  struct netaddr ip; // = { { 10,1,0,101}, AF_INET, 32 };
+  struct netaddr ip;
   struct rfc5444_writer_address *addr;
   char value0 =  0, value1 = 1;
 
-  CHECK_TRUE(0 == netaddr_from_string(&ip, "10.1.0.101"), "failed to initialize ip");
-  //ip._addr[0] = 10; ip._addr[1] = 1; ip._addr[2] = 0; ip._addr[3] = 101;
+  CHECK_TRUE(0 == netaddr_from_string(&ip, "fc00:1::1"), "failed to initialize ip");
   addr = rfc5444_writer_add_address(wr, cpr.creator, &ip, false);
   rfc5444_writer_add_addrtlv(wr, addr, &addrtlvs[1], &value1, 1, false);
 
-  CHECK_TRUE(0 == netaddr_from_string(&ip, "10.1.0.102"), "failed to initialize ip");
-  //ip._addr[0] = 10; ip._addr[1] = 1; ip._addr[2] = 0; ip._addr[3] = 102;
+  CHECK_TRUE(0 == netaddr_from_string(&ip, "fc00:2::1"), "failed to initialize ip");
   addr = rfc5444_writer_add_address(wr, cpr.creator, &ip, false);
   rfc5444_writer_add_addrtlv(wr, addr, &addrtlvs[0], &value0, 1, false);
 
-  CHECK_TRUE(0 == netaddr_from_string(&ip, "10.1.0.103"), "failed to initialize ip");
-  //ip._addr[0] = 10; ip._addr[1] = 1; ip._addr[2] = 0; ip._addr[3] = 103;
+  CHECK_TRUE(0 == netaddr_from_string(&ip, "fc00:3::1"), "failed to initialize ip");
   addr = rfc5444_writer_add_address(wr, cpr.creator, &ip, false);
   rfc5444_writer_add_addrtlv(wr, addr, &addrtlvs[1], &value1, 1, false);
 
-  CHECK_TRUE(0 == netaddr_from_string(&ip, "10.11.11.11"), "failed to initialize ip");
-  //ip._addr[0] = 10; ip._addr[1] = 11; ip._addr[2] = 11; ip._addr[3] = 11;
+  CHECK_TRUE(0 == netaddr_from_string(&ip, "fc00:4::1"), "failed to initialize ip");
+  addr = rfc5444_writer_add_address(wr, cpr.creator, &ip, false);
+  rfc5444_writer_add_addrtlv(wr, addr, &addrtlvs[0], &value0, 1, false);
+
+  CHECK_TRUE(0 == netaddr_from_string(&ip, "fe80::1234:5678:9abc:def0"), "failed to initialize ip");
   addr = rfc5444_writer_add_address(wr, cpr.creator, &ip, false);
   rfc5444_writer_add_addrtlv(wr, addr, &addrtlvs[1], &value1, 1, false);
+
 }
 
 static void write_packet(struct rfc5444_writer *w __attribute__ ((unused)),
@@ -195,15 +147,20 @@ static void write_packet(struct rfc5444_writer *w __attribute__ ((unused)),
   printf("\n");
 
   abuf_init(&out);
+  rfc5444_print_raw(&out, buf, length);
+#if 0
+  abuf_puts(&out, "\n\n\n");
   rfc5444_print_direct(&out, buf, length);
+#endif
 
   printf("%s\n", abuf_getptr(&out));
   abuf_free(&out);
-
+#if 0
   CHECK_TRUE(length == sizeof(result), "Result has wrong length: %zu != %zu", length, sizeof(result));
   if (length == sizeof(result)) {
     CHECK_TRUE(memcmp(result, buffer, sizeof(result)) == 0, "Result differs from pattern");
   }
+#endif
 }
 
 
@@ -213,7 +170,7 @@ static void clear_elements(void) {
 static void test(void) {
   START_TEST();
 
-  CHECK_TRUE(0 == rfc5444_writer_create_message_alltarget(&writer, 1, 4), "Parser should return 0");
+  CHECK_TRUE(0 == rfc5444_writer_create_message_alltarget(&writer, 1, 16), "Parser should return 0");
   rfc5444_writer_flush(&writer, &out_if, false);
 
   END_TEST();

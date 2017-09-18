@@ -215,6 +215,9 @@ struct nhdp_domain {
   /*! index in the domain array */
   int index;
 
+  /*! true if MPR should be recalculated */
+  bool _mpr_outdated;
+
   /*! temporary storage for willingness processing */
   uint8_t _tmp_willingness;
 
@@ -295,9 +298,6 @@ EXPORT void nhdp_domain_process_metric_linktlv(struct nhdp_domain *,
 EXPORT void nhdp_domain_process_metric_2hoptlv(struct nhdp_domain *d,
     struct nhdp_l2hop *l2hop, const uint8_t *value);
 
-EXPORT void nhdp_domain_recalculate_mpr(bool force_change);
-EXPORT bool nhdp_domain_node_is_mpr(void);
-
 EXPORT size_t nhdp_domain_process_mprtypes_tlv(
     uint8_t *mprtypes, size_t mprtypes_size,
     struct rfc5444_reader_tlvblock_entry *tlv);
@@ -316,6 +316,13 @@ EXPORT size_t nhdp_domain_encode_willingness_tlvvalue(
 
 EXPORT bool nhdp_domain_set_incoming_metric(
     struct nhdp_domain_metric *metric, struct nhdp_link *lnk, uint32_t metric_in);
+EXPORT bool nhdp_domain_recalculate_metrics(
+    struct nhdp_domain *domain, struct nhdp_neighbor *neigh);
+
+EXPORT bool nhdp_domain_node_is_mpr(void);
+EXPORT void nhdp_domain_delayed_mpr_recalculation(
+    struct nhdp_domain *domain, struct nhdp_neighbor *neigh);
+EXPORT void nhdp_domain_recalculate_mpr(void);
 
 EXPORT struct list_entity *nhdp_domain_get_list(void);
 EXPORT struct list_entity *nhdp_domain_get_listener_list(void);

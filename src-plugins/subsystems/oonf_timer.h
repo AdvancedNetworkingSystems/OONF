@@ -80,11 +80,17 @@ struct oonf_timer_class {
   /*! true if this is a class of periodic timers */
   bool periodic;
 
-  /*! Stats, resource usage */
-  uint32_t usage;
+  /*! Number of times the timer is currently running */
+  uint32_t _stat_usage;
 
-  /*! Stats, resource churn */
-  uint32_t changes;
+  /*! Number of times the timer was reset */
+  uint32_t _stat_changes;
+
+  /*! number of times the timer fired */
+  uint32_t _stat_fired;
+
+  /*! number of times the timer took more than a timeslice */
+  uint32_t _stat_long;
 
   /*! pointer to timer currently in callback */
   struct oonf_timer_instance *_timer_in_callback;
@@ -178,6 +184,42 @@ oonf_timer_set(struct oonf_timer_instance *timer, uint64_t rel_time) {
 static INLINE void
 oonf_timer_start(struct oonf_timer_instance *timer, uint64_t rel_time) {
   oonf_timer_start_ext(timer, rel_time, rel_time);
+}
+
+/**
+ * @param tc timer class
+ * @return number of timers currently in use
+ */
+static INLINE uint32_t
+oonf_timer_get_usage(struct oonf_timer_class *tc) {
+  return tc->_stat_usage;
+}
+
+/**
+ * @param tc timer class
+ * @return number of times the timer was reset
+ */
+static INLINE uint32_t
+oonf_timer_get_changes(struct oonf_timer_class *tc) {
+  return tc->_stat_changes;
+}
+
+/**
+ * @param tc timer class
+ * @return number of times the timer was fired
+ */
+static INLINE uint32_t
+oonf_timer_get_fired(struct oonf_timer_class *tc) {
+  return tc->_stat_fired;
+}
+
+/**
+ * @param tc timer class
+ * @return number of times the timer took more than a timeslice
+ */
+static INLINE uint32_t
+oonf_timer_get_long(struct oonf_timer_class *tc) {
+  return tc->_stat_long;
 }
 
 #endif /* OONF_TIMER_H_ */

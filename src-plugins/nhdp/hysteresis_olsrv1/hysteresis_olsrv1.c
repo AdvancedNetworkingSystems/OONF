@@ -287,9 +287,7 @@ _cb_link_removed(void *ptr) {
  * Callback for hysteresis handler which is triggered to
  * update the hysteresis when a HELLO is received.
  * @param lnk nhdp link
- * @param context RFC5444 message context
- * @param vtime validity time
- * @param itime itime time, 0 if not set
+ * @param context RFC5444 tlvblock reader context
  */
 static void
 _cb_update_hysteresis(struct nhdp_link *lnk,

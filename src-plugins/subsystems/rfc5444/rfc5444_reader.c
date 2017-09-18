@@ -361,10 +361,9 @@ _calc_tlvblock_intorder(struct rfc5444_reader_tlvblock_entry *entry) {
 }
 
 /**
- * Checks if two internal types have the same tlv type
- * @param int_type1 first internal type
- * @param int_type2 second internal type
- * @param match_ext true if extension type is relevant
+ * Checks if a tlvblock consumer entry to a tlvblock entry
+ * @param tlv tlvlock entry, might be NULL
+ * @param entry tlvblock consumer entry, might be NULL
  * @return <0 if type1<type2, ==0 if type1==type2, >0 if type1>type2
  */
 static int
@@ -611,7 +610,7 @@ cleanup_parse_tlvblock:
  * @param consumer pointer to first consumer for this message type
  * @param context pointer to context for tlv block
  * @param entries pointer avl_tree of tlv block entries
- * @param index of current address inside the addressblock, 0 for message tlv block
+ * @param idx of current address inside the addressblock, 0 for message tlv block
  * @return RFC5444_TLV_DROP_ADDRESS if the current address should
  *   be dropped for later consumers, RFC5444_TLV_DROP_CONTEXT if
  *   the complete message/package should be dropped for
@@ -1278,11 +1277,10 @@ cleanup_parse_message:
 /**
  * Add a tlvblock consumer to a linked list of consumers.
  * The list is kept sorted by the order of the consumers.
- * @param parser pointer to parser context
+ * @param consumer tlvblock consumer entry
  * @param consumer_tree pointer to tree of consumers
  * @param entries pointer to rfc5444_reader_tlvblock_consumer_entry array
  * @param entrycount number of elements in array
- * @param order order of the consumer
  * @return pointer to rfc5444_reader_tlvblock_consumer,
  *   NULL if an error happened
  */
@@ -1329,9 +1327,8 @@ _add_consumer(struct rfc5444_reader_tlvblock_consumer *consumer, struct avl_tree
 
 /**
  * Free a rfc5444_reader_tlvblock_consumer and remove it from its linked list
- * @param parser pointer to parser context
- * @param listhead pointer to listhead pointer
- * @param consumer pointer to rfc5444_reader_tlvblock_consumer
+ * @param consumer_tree tree of tlvblock consumers
+ * @param consumer rfc5444_reader_tlvblock_consumer
  */
 static void
 _free_consumer(struct avl_tree *consumer_tree,

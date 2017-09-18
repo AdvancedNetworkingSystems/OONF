@@ -357,7 +357,7 @@ nhdp_interface_get_address_tree(void) {
 /**
  * Add a nhdp interface address to an interface
  * @param interf pointer to nhdp interface
- * @param if_addr address to add to interface
+ * @param addr address to add to interface
  */
 void
 _addr_add(struct nhdp_interface *interf, struct netaddr *addr) {
@@ -421,7 +421,7 @@ _addr_has_been_removed(struct nhdp_interface_addr *addr, uint64_t vtime) {
 
 /**
  * remove address from NHDP interface
- * @param ptr pointer to nhdp interface address
+ * @param addr nhdp interface address
  */
 static void
 _remove_addr(struct nhdp_interface_addr *addr) {
@@ -450,7 +450,6 @@ _cb_addr_timeout(struct oonf_timer_instance *ptr) {
  * AVL tree comparator for netaddr objects.
  * @param k1 pointer to key 1
  * @param k2 pointer to key 2
- * @param ptr not used in this comparator
  * @return +1 if k1>k2, -1 if k1<k2, 0 if k1==k2
  */
 static int

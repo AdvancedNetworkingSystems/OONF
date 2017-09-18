@@ -177,7 +177,7 @@ bitstream_w_memcpy(struct bitstream_w *stream, const void *src, size_t bytes) {
  * @param stream bitstream
  * @param src input source
  * @param bits number of bits to copy
- * @return
+ * @return -1 if an error happened, 0 otherwise
  */
 int
 bitstream_w_write(struct bitstream_w *stream, uint64_t src, int32_t bits) {

@@ -325,9 +325,7 @@ nhdp_forwarding_selector(struct rfc5444_writer_target *rfc5444_target,
 /**
  * default implementation for rfc5444 forwarding selector to
  * hangle dualstack correctly
- * @param writer rfc5444 writer
- * @param target rfc5444 target
- * @param ptr custom pointer, contains rfc5444 target
+ * @param rfc5444_target rfc5444 target
  * @return true if target corresponds to selection
  */
 static bool

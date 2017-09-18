@@ -315,7 +315,7 @@ rfc5444_writer_set_pkt_seqno(struct rfc5444_writer *writer __attribute__ ((unuse
 
 /**
  * Write the header of a packet into the packet buffer
- * @param writer pointer to writer target object
+ * @param target rfc5444 writer target
  */
 static void
 _write_pktheader(struct rfc5444_writer_target *target) {

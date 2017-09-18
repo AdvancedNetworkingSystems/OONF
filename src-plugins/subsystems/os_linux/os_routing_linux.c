@@ -405,7 +405,7 @@ _routing_finished(struct os_route *route, int error) {
  * Initiatize the an netlink routing message
  * @param msg pointer to netlink message header
  * @param route data to be added to the netlink message
- * @param scope scope of route to be set/removed
+ * @param rt_scope scope of route to be set/removed
  * @return -1 if an error happened, 0 otherwise
  */
 static int
@@ -639,7 +639,7 @@ _match_routes(struct os_route *filter, struct os_route *route) {
 
 /**
  * Handle incoming rtnetlink messages
- * @param msg
+ * @param msg netlink message including header
  */
 static void
 _cb_rtnetlink_message(struct nlmsghdr *msg) {
@@ -671,7 +671,7 @@ _cb_rtnetlink_message(struct nlmsghdr *msg) {
 
 /**
  * Handle incoming rtnetlink messages
- * @param msg
+ * @param msg netlink header including message
  */
 static void
 _cb_rtnetlink_event_message(struct nlmsghdr *msg) {
@@ -700,8 +700,8 @@ _cb_rtnetlink_event_message(struct nlmsghdr *msg) {
 
 /**
  * Handle feedback from netlink socket
- * @param seq
- * @param error
+ * @param seq sequence number of netlink response
+ * @param err error value
  */
 static void
 _cb_rtnetlink_error(uint32_t seq, int err) {
@@ -710,7 +710,6 @@ _cb_rtnetlink_error(uint32_t seq, int err) {
   struct os_route_str rbuf;
 #endif
 
-  /* transform into errno number */
   route = avl_find_element(&_rtnetlink_feedback, &seq, route, _internal._node);
   if (route) {
     OONF_DEBUG(LOG_OS_ROUTING, "Route seqno %u failed: %s (%d) %s",
@@ -741,7 +740,7 @@ _cb_rtnetlink_timeout(void) {
 
 /**
  * Handle done from multipart netlink messages
- * @param seq
+ * @param seq netlink sequence number
  */
 static void
 _cb_rtnetlink_done(uint32_t seq) {

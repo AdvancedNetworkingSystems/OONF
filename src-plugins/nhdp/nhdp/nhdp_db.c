@@ -275,13 +275,14 @@ nhdp_db_neighbor_remove(struct nhdp_neighbor *neigh) {
     }
   }
 
+  if (was_mpr) {
+    /* all domains might have changed */
+    nhdp_domain_delayed_mpr_recalculation(NULL, neigh);
+  }
+
   /* remove from global list and free memory */
   list_remove(&neigh->_global_node);
   oonf_class_free(&_neigh_info, neigh);
-
-  if (was_mpr) {
-    nhdp_domain_recalculate_mpr(true);
-  }
 }
 
 /**
@@ -411,8 +412,8 @@ nhdp_db_neighbor_addr_remove(struct nhdp_naddr *naddr) {
 
 /**
  * Moves a nhdp neighbor address to a different neighbor
- * @param neigh
- * @param naddr
+ * @param neigh nhdp neighbor
+ * @param naddr nhdp neighbor address
  */
 void
 nhdp_db_neighbor_addr_move(struct nhdp_neighbor *neigh, struct nhdp_naddr *naddr) {
@@ -705,8 +706,8 @@ nhdp_db_link_addr_remove(struct nhdp_laddr *laddr) {
 
 /**
  * Moves a nhdp link address to a different link
- * @param lnk
- * @param laddr
+ * @param lnk NHDP link 
+ * @param laddr NHDP link address
  */
 void
 nhdp_db_link_addr_move(struct nhdp_link *lnk, struct nhdp_laddr *laddr) {
@@ -854,7 +855,8 @@ nhdp_db_link_update_status(struct nhdp_link *lnk) {
   if (old_status != lnk->status) {
     /* link status was changed */
     lnk->last_status_change = oonf_clock_getNow();
-    nhdp_domain_recalculate_mpr(true);
+    nhdp_domain_recalculate_metrics(NULL, lnk->neigh);
+    nhdp_domain_delayed_mpr_recalculation(NULL, lnk->neigh);
 
     /* trigger change event */
     oonf_class_event(&_link_info, lnk, OONF_OBJECT_CHANGED);
@@ -922,6 +924,32 @@ nhdp_db_get_neigh_originator_tree(void) {
  */
 int
 _nhdp_db_link_calculate_status(struct nhdp_link *lnk) {
+  const struct netaddr *local_originator;
+  const struct os_interface *localif;
+  int af_type;
+
+  af_type = netaddr_get_address_family(&lnk->if_addr);
+  local_originator = nhdp_get_originator(af_type);
+  localif = nhdp_interface_get_if_listener(lnk->local_if)->data;
+
+  /* check for originator collision */
+  if (!netaddr_is_unspec(local_originator)
+      && (netaddr_cmp(local_originator, &lnk->if_addr) == 0
+          || netaddr_cmp(local_originator, &lnk->neigh->originator) == 0)) {
+    return NHDP_LINK_PENDING;
+  }
+
+  /* check for interface address collision */
+  if (nhdp_interface_addr_if_get(lnk->local_if, &lnk->if_addr)) {
+    return NHDP_LINK_PENDING;
+  }
+
+  /* check for MAC collision */
+  if (netaddr_cmp(&localif->mac, &lnk->remote_mac) == 0) {
+    return NHDP_LINK_PENDING;
+  }
+
+  /* calculate link status as described in RFC 6130 */
   if (nhdp_hysteresis_is_pending(lnk))
     return NHDP_LINK_PENDING;
   if (nhdp_hysteresis_is_lost(lnk))
@@ -1023,20 +1051,10 @@ _cb_link_heard(struct oonf_timer_instance *ptr) {
 static void
 _cb_link_symtime(struct oonf_timer_instance *ptr) {
   struct nhdp_link *lnk;
-  struct nhdp_neighbor_domaindata *data;
-  struct nhdp_domain *domain;
 
   lnk = container_of(ptr, struct nhdp_link, sym_time);
   OONF_DEBUG(LOG_NHDP, "Link Symtime fired: 0x%0zx", (size_t)lnk);
   nhdp_db_link_update_status(lnk);
-
-  list_for_each_element(nhdp_domain_get_list(), domain, _node) {
-    data = nhdp_domain_get_neighbordata(domain, lnk->neigh);
-    if (data->neigh_is_mpr) {
-      nhdp_domain_recalculate_mpr(false);
-      return;
-    }
-  }
 }
 
 /**

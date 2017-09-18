@@ -124,7 +124,7 @@ struct oonf_viewer_template {
   struct json_session _json;
 };
 
-EXPORT int oonf_viewer_output_prepare(struct oonf_viewer_template *template,
+EXPORT void oonf_viewer_output_prepare(struct oonf_viewer_template *template,
     struct abuf_template_storage *storage, struct autobuf *out, const char *format);
 EXPORT void oonf_viewer_output_print_line(struct oonf_viewer_template *template);
 EXPORT void oonf_viewer_output_finish(struct oonf_viewer_template *template);

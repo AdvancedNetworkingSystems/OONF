@@ -162,9 +162,8 @@ _cleanup(void) {
 
 /**
  * Callback triggered when a NHDP hello message is received by the stack
- * @param consumer
- * @param context
- * @return
+ * @param context rfc5444 tlvblock reader context
+ * @return see rfc5444_result enum
  */
 static enum rfc5444_result
 _cb_message_start_callback(struct rfc5444_reader_tlvblock_context *context) {
@@ -202,9 +201,8 @@ _cb_message_start_callback(struct rfc5444_reader_tlvblock_context *context) {
 
 /**
  * Callblack triggered to deliver the message TLVs received in a NHDP Hello
- * @param consumer
- * @param context
- * @return
+ * @param context rfc5444 tlvblock reader context
+ * @return see rfc5444_result enum
  */
 static enum rfc5444_result
 _cb_messagetlvs(struct rfc5444_reader_tlvblock_context *context __attribute__((unused))) {
@@ -253,9 +251,8 @@ _cb_messagetlvs(struct rfc5444_reader_tlvblock_context *context __attribute__((u
 
 /**
  * Callblack triggered to deliver the address TLVs received in a NHDP Hello
- * @param consumer
- * @param context
- * @return
+ * @param context rfc5444 tlvblock reader context
+ * @return see rfc5444_result enum
  */
 
 static enum rfc5444_result

@@ -358,7 +358,7 @@ oonf_main_shall_stop_scheduler(void) {
 
 /**
  * Write process ID into file
- * @param filename
+ * @param filename name/path of pidfile
  * @return -1 if an error happened, 0 otherwise
  */
 static int
@@ -389,7 +389,7 @@ _write_pidfile(const char *filename) {
 
 /**
  * Handle incoming SIGINT signal
- * @param signo
+ * @param signo unused
  */
 static void
 quit_signal_handler(int signo __attribute__ ((unused))) {
@@ -398,7 +398,7 @@ quit_signal_handler(int signo __attribute__ ((unused))) {
 
 /**
  * Handle incoming SIGHUP signal
- * @param signo
+ * @param signo unused
  */
 static void
 hup_signal_handler(int signo __attribute__ ((unused))) {
@@ -407,6 +407,9 @@ hup_signal_handler(int signo __attribute__ ((unused))) {
 
 /**
  * Mainloop of olsrd
+ * @param argc argument counter
+ * @param argv argument vector
+ * @param appdata OONF appdata
  * @return exit code for olsrd
  */
 static int
@@ -501,8 +504,7 @@ parse_early_commandline(int argc, char **argv) {
  * Parse command line of olsrd
  * @param argc number of arguments
  * @param argv argument vector
- * @param def_config default configuration file, NULL if
- *   no default config file should be loaded
+ * @param appdata OONF appdata
  * @param reload_only true if only the command line arguments should
  *   be parsed that load a configuration (--set, --remove, --load,
  *   and --format), false for normal full parsing.

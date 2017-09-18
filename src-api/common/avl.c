@@ -192,13 +192,13 @@ avl_find_greaterequal(const struct avl_tree *tree, const void *key) {
 }
 
 /**
- * Finds the end of linked list from the avl node
- * @param tree pointer to tree
- * @param node pointer
- * @return pointer to last node of the list
+ * Finds the last node with the same value than a reference node
+ * @param tree avl tree
+ * @param last reference node
+ * @return pointer to last node with the same value
  */
 struct avl_node*
-_avl_find_last(struct avl_tree *tree, struct avl_node* last)
+_avl_find_last(struct avl_tree *tree, struct avl_node *last)
 {
   struct avl_node *next;
   while (!list_is_last(&tree->list_head, &last->list)) {
@@ -214,8 +214,8 @@ _avl_find_last(struct avl_tree *tree, struct avl_node* last)
 
 /**
  * Inserts an avl_node into a tree
- * @param tree pointer to tree
- * @param new pointer to node
+ * @param tree avl tree
+ * @param new node to be inserted into the tree
  * @return 0 if node was inserted successfully, -1 if it was not inserted
  *   because of a key collision
  */

@@ -120,6 +120,9 @@ struct oonf_packet_socket {
   /*! configuration of packet socket */
   struct oonf_packet_config config;
 
+  /*! name of socket */
+  char socket_name[sizeof(struct netaddr_str)+5];
+
   /*! true if errno==1 suppression is active */
   bool _errno1_suppression;
 

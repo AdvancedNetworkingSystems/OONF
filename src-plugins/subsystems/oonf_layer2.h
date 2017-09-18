@@ -440,7 +440,9 @@ oonf_layer2_set_origin(struct oonf_layer2_data *l2data,
 static INLINE int
 oonf_layer2_set_value(struct oonf_layer2_data *l2data,
     const struct oonf_layer2_origin *origin, int64_t value) {
-  if (l2data->_origin && l2data->_origin->priority >= origin->priority) {
+  if (l2data->_origin
+      && l2data->_origin != origin
+      && l2data->_origin->priority >= origin->priority) {
     /* only overwrite lower priority data */
     return -1;
   }

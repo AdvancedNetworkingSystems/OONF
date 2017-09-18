@@ -186,7 +186,7 @@ EXPORT struct avl_tree *nhdp_interface_get_tree(void);
 EXPORT struct avl_tree *nhdp_interface_get_address_tree(void);
 
 /**
- * @param interface name
+ * @param name interface name
  * @return nhdp interface, NULL if not found
  */
 static INLINE struct nhdp_interface *
@@ -218,7 +218,7 @@ nhdp_interface_addr_if_get(const struct nhdp_interface *interf, const struct net
 }
 
 /**
- * @param network address
+ * @param addr network address
  * @return nhdp interface address
  */
 static INLINE struct nhdp_interface_addr *
@@ -274,7 +274,7 @@ nhdp_interface_remove_l2hop(struct nhdp_l2hop *twohop) {
 
 /**
  * Attach a link address to the local nhdp interface
- * @param laddr
+ * @param laddr NHDP link address
  */
 static INLINE void
 nhdp_interface_add_laddr(struct nhdp_laddr *laddr) {
@@ -283,7 +283,7 @@ nhdp_interface_add_laddr(struct nhdp_laddr *laddr) {
 
 /**
  * Detach a link address from the local nhdp interface
- * @param laddr
+ * @param laddr NHDP link address
  */
 static INLINE void
 nhdp_interface_remove_laddr(struct nhdp_laddr *laddr) {

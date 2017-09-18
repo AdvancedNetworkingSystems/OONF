@@ -236,6 +236,9 @@ olsrv2_tc_node_remove(struct olsrv2_tc_node *node) {
     avl_remove(&_tc_tree, &node->_originator_node);
     oonf_class_free(&_tc_node_class, node);
   }
+
+  /* all domains might have changed */
+  olsrv2_routing_domain_changed(NULL);
 }
 
 /**
@@ -326,6 +329,9 @@ olsrv2_tc_edge_add(struct olsrv2_tc_node *src, struct netaddr *addr) {
  */
 bool
 olsrv2_tc_edge_remove(struct olsrv2_tc_edge *edge) {
+  /* all domains might have changed */
+  olsrv2_routing_domain_changed(NULL);
+
   return _remove_edge(edge, true);
 }
 
@@ -423,6 +429,9 @@ olsrv2_tc_endpoint_remove(
 
   /* free attached network */
   oonf_class_free(&_tc_attached_class, net);
+
+  /* all domains might have changed */
+  olsrv2_routing_domain_changed(NULL);
 }
 
 /**

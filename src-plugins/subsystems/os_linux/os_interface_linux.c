@@ -272,13 +272,15 @@ static void
 _cleanup(void) {
   struct os_interface_listener *if_listener, *if_listener_it;
   struct os_interface *os_if, *os_if_it;
+  bool configured;
 
   avl_for_each_element_safe(&_interface_data_tree, os_if, _node, os_if_it) {
+    configured = os_if->_internal.configured;
     list_for_each_element_safe(&os_if->_listeners, if_listener, _node, if_listener_it) {
       os_interface_linux_remove(if_listener);
     }
 
-    if (os_if->_internal.configured) {
+    if (configured) {
       os_if->_internal.configured = false;
       _remove_interface(os_if);
     }
@@ -568,6 +570,7 @@ _add_interface(const char *name) {
 
     /* initialize list/tree */
     avl_init(&data->addresses, avl_comp_netaddr, false);
+    avl_init(&data->peers, avl_comp_netaddr, false);
     list_init_head(&data->_listeners);
 
     /* initialize change timer */
@@ -612,6 +615,10 @@ _remove_interface(struct os_interface *data) {
   /* remove all addresses */
   avl_for_each_element_safe(&data->addresses, ip, _node, ip_iter) {
     avl_remove(&data->addresses, &ip->_node);
+    oonf_class_free(&_interface_ip_class, ip);
+  }
+  avl_for_each_element_safe(&data->peers, ip, _node, ip_iter) {
+    avl_remove(&data->peers, &ip->_node);
     oonf_class_free(&_interface_ip_class, ip);
   }
 
@@ -687,7 +694,7 @@ _refresh_mesh(struct os_interface *os_if, char *old_redirect, char *old_spoof) {
 
 /**
  * Cleanup interface after mesh usage
- * @param data network interface data
+ * @param os_if network interface
  */
 static void
 _cleanup_mesh(struct os_interface *os_if) {
@@ -1101,15 +1108,19 @@ _update_address_shortcuts(struct os_interface *os_if) {
  * Add an IP address/prefix to a network interface
  * @param os_if network interface
  * @param prefixed_addr full IP address with prefix length
+ * @param peer true if this is a peer address, false otherwise
  */
 static void
-_add_address(struct os_interface *os_if, struct netaddr *prefixed_addr) {
+_add_address(struct os_interface *os_if, struct netaddr *prefixed_addr, bool peer) {
   struct os_interface_ip *ip;
+  struct avl_tree *tree;
 #if defined(OONF_LOG_INFO)
   struct netaddr_str nbuf;
 #endif
 
-  ip = avl_find_element(&os_if->addresses, prefixed_addr, ip, _node);
+  tree = peer ? &os_if->peers : &os_if->addresses;
+
+  ip = avl_find_element(tree, prefixed_addr, ip, _node);
   if (!ip) {
     ip = oonf_class_malloc(&_interface_ip_class);
     if (!ip) {
@@ -1119,14 +1130,15 @@ _add_address(struct os_interface *os_if, struct netaddr *prefixed_addr) {
     /* establish key and add to tree */
     memcpy(&ip->prefixed_addr, prefixed_addr, sizeof(*prefixed_addr));
     ip->_node.key = &ip->prefixed_addr;
-    avl_insert(&os_if->addresses, &ip->_node);
+    avl_insert(tree, &ip->_node);
 
     /* add back pointer */
     ip->interf = os_if;
   }
 
-  OONF_INFO(LOG_OS_INTERFACE, "Add address to %s: %s",
-      os_if->name, netaddr_to_string(&nbuf, prefixed_addr));
+  OONF_INFO(LOG_OS_INTERFACE, "Add address to %s%s: %s",
+      os_if->name, peer ? " (peer)" : "",
+      netaddr_to_string(&nbuf, prefixed_addr));
 
   /* copy sanitized addresses */
   memcpy(&ip->address, prefixed_addr, sizeof(*prefixed_addr));
@@ -1138,23 +1150,27 @@ _add_address(struct os_interface *os_if, struct netaddr *prefixed_addr) {
  * Remove an IP address/prefix from a network interface
  * @param os_if network interface
  * @param prefixed_addr full IP address with prefix length
+ * @param peer true if this is a peer address, false otherwise
  */
 static void
-_remove_address(struct os_interface *os_if, struct netaddr *prefixed_addr) {
+_remove_address(struct os_interface *os_if, struct netaddr *prefixed_addr, bool peer) {
   struct os_interface_ip *ip;
+  struct avl_tree *tree;
 #if defined(OONF_LOG_INFO)
   struct netaddr_str nbuf;
 #endif
 
-  ip = avl_find_element(&os_if->addresses, prefixed_addr, ip, _node);
+  tree = peer ? &os_if->peers : &os_if->addresses;
+  ip = avl_find_element(tree, prefixed_addr, ip, _node);
   if (!ip) {
     return;
   }
 
-  OONF_INFO(LOG_OS_INTERFACE, "Remove address from %s: %s",
-      os_if->name, netaddr_to_string(&nbuf, prefixed_addr));
+  OONF_INFO(LOG_OS_INTERFACE, "Remove address from %s%s: %s",
+      os_if->name, peer ? " (peer)" : "",
+      netaddr_to_string(&nbuf, prefixed_addr));
 
-  avl_remove(&os_if->addresses, &ip->_node);
+  avl_remove(tree, &ip->_node);
   oonf_class_free(&_interface_ip_class, ip);
 }
 
@@ -1169,7 +1185,7 @@ _address_parse_nlmsg(const char *ifname, struct nlmsghdr *msg) {
   struct rtattr *ifa_attr;
   int ifa_len;
   struct os_interface *ifdata;
-  struct netaddr addr;
+  struct netaddr ifa_local, ifa_address;
   bool update;
 
   ifa_msg = NLMSG_DATA(msg);
@@ -1185,18 +1201,26 @@ _address_parse_nlmsg(const char *ifname, struct nlmsghdr *msg) {
       ifname, ifa_msg->ifa_index, ifa_len);
 
   update = false;
+  netaddr_invalidate(&ifa_local);
+  netaddr_invalidate(&ifa_address);
+
   for(; RTA_OK(ifa_attr, ifa_len); ifa_attr = RTA_NEXT(ifa_attr,ifa_len)) {
     switch(ifa_attr->rta_type) {
       case IFA_ADDRESS:
-        netaddr_from_binary_prefix(&addr, RTA_DATA(ifa_attr), RTA_PAYLOAD(ifa_attr), 0,
-            ifa_msg->ifa_prefixlen);
-        if (msg->nlmsg_type == RTM_NEWADDR) {
-          _add_address(ifdata, &addr);
+        netaddr_from_binary_prefix(&ifa_address,
+            RTA_DATA(ifa_attr), RTA_PAYLOAD(ifa_attr), 0,
+                ifa_msg->ifa_prefixlen);
+        if (netaddr_is_unspec(&ifa_local)) {
+          memcpy(&ifa_local, &ifa_address, sizeof(ifa_local));
         }
-        else {
-          _remove_address(ifdata, &addr);
+        break;
+      case IFA_LOCAL:
+        netaddr_from_binary_prefix(&ifa_local,
+            RTA_DATA(ifa_attr), RTA_PAYLOAD(ifa_attr), 0,
+                ifa_msg->ifa_prefixlen);
+        if (netaddr_is_unspec(&ifa_address)) {
+          memcpy(&ifa_address, &ifa_local, sizeof(ifa_address));
         }
-        update = true;
         break;
       default:
         OONF_DEBUG(LOG_OS_INTERFACE, "ifa_attr_type: %u", ifa_attr->rta_type);
@@ -1204,16 +1228,37 @@ _address_parse_nlmsg(const char *ifname, struct nlmsghdr *msg) {
     }
   }
 
-  if (update) {
+  if (!netaddr_is_unspec(&ifa_local)) {
+    if (msg->nlmsg_type == RTM_NEWADDR) {
+      _add_address(ifdata, &ifa_local, false);
+    }
+    else {
+      _remove_address(ifdata, &ifa_local, false);
+    }
+
     _update_address_shortcuts(ifdata);
+    update = true;
+  }
+
+  if (netaddr_cmp(&ifa_local, &ifa_address)) {
+    if (msg->nlmsg_type == RTM_NEWADDR) {
+      _add_address(ifdata, &ifa_address, true);
+    }
+    else {
+      _remove_address(ifdata, &ifa_address, true);
+    }
+
+    update = true;
+  }
+
+  if (update) {
     if (!ifdata->_addr_initialized) {
       ifdata->_addr_initialized = true;
       OONF_INFO(LOG_OS_INTERFACE, "Interface %s address data initialized",
           ifdata->name);
     }
+    _trigger_if_change_including_any(ifdata);
   }
-
-  _trigger_if_change_including_any(ifdata);
 }
 
 /**

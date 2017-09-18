@@ -216,17 +216,21 @@ static void test_merge(void) {
     CHECK_TRUE(e == &elements1[i], "for_each iteration %d failed", i);
     i++;
   }
+  CHECK_TRUE(i == COUNT, "missing elements from list 1");
+
   i = 0;
   list_for_each_element(&head2, e, node) {
     CHECK_TRUE(e == &elements2[i], "for_each iteration %d failed", i);
     i++;
   }
+  CHECK_TRUE(i == COUNT, "missing elements from list 2");
 
   list_merge(&head, &head2);
-  CHECK_TRUE(list_is_empty(&head2), "list_is_empty (1)");
+  CHECK_TRUE(list_is_empty(&head2), "list_is_empty (2)");
+  CHECK_TRUE(!list_is_empty(&head), "!list_is_empty (1)");
 
   i = 0;
-  list_for_each_element(&head2, e, node) {
+  list_for_each_element(&head, e, node) {
     if (i < COUNT) {
       CHECK_TRUE(e == &elements1[i], "for_each iteration %d failed", i);
     }
@@ -235,6 +239,7 @@ static void test_merge(void) {
     }
     i++;
   }
+  CHECK_TRUE(i == COUNT*2, "missing elements from merged list");
 
   END_TEST();
 }

@@ -556,7 +556,8 @@ _cb_update_timer(struct oonf_timer_instance *ptr) {
 
 /**
  * Generate a new auto-configured address on an interface
- * @param nhdp_if pointer to NHDP interface
+ * @param auto_ll4 private auto_ll4 data structure
+ * @param ipv6_ll linklocal IPv6 address
  */
 static void
 _generate_default_address(struct _nhdp_if_autoll4 *auto_ll4, const struct netaddr *ipv6_ll) {
@@ -587,7 +588,7 @@ _generate_default_address(struct _nhdp_if_autoll4 *auto_ll4, const struct netadd
 /**
  * Get the current number of IPv4 addresses of an interface and
  * copy an IPv4 link-local address if set.
- * @param ifdata pointer to interface data
+ * @param os_if interface data
  * @param ll4_addr return buffer for link-local address
  * @param current_ll4 current link-local address, this will be returned
  *   if set, even if multiple ipv4 link-local addresses are present

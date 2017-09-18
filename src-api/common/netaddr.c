@@ -109,6 +109,9 @@ const struct netaddr NETADDR_IPV4_LOOPBACK_NET = { {127,0,0,1,0,0,0,0,0,0,0,0,0,
 /*! IPv6 loopback address */
 const struct netaddr NETADDR_IPV6_LOOPBACK = { {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}, AF_INET6, 128 };
 
+/*! Ethernet broadcast */
+const struct netaddr NETADDR_MAC48_BROADCAST = { {0xff,0xff,0xff,0xff,0xff,0xff,0,0,0,0,0,0,0,0,0,0}, AF_MAC48, 48 };
+
 /*! socket for binding to any IPv4 address */
 const union netaddr_socket NETADDR_SOCKET_IPV4_ANY = {
   .v4 = {
@@ -1103,7 +1106,7 @@ _subnetmask_to_prefixlen(const char *src) {
  * Calculates if a binary address is part of a netaddr prefix.
  * It will assume that the length of the binary address and its
  * address family makes sense.
- * @param addr netaddr prefix
+ * @param subnet netaddr prefix
  * @param bin pointer to binary address
  * @return true if part of the prefix, false otherwise
  */

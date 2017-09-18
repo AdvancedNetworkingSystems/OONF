@@ -200,7 +200,7 @@ oonf_clock_fromIntervalString(uint64_t *result, const char *string) {
 
 /**
  * Returns a timestamp s seconds in the future
- * @param s milliseconds until timestamp
+ * @param relative milliseconds until timestamp
  * @return absolute time when event will happen
  */
 static INLINE uint64_t

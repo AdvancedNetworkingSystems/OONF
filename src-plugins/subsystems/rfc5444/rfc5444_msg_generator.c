@@ -343,7 +343,7 @@ rfc5444_writer_create_message(struct rfc5444_writer *writer, uint8_t msgid,
         writer->_state = RFC5444_WRITER_NONE;
 #endif
         _rfc5444_writer_free_addresses(writer, msg);
-        return -1;
+        return RFC5444_MTU_TOO_SMALL;
       }
       not_fragmented = false;
 
@@ -407,8 +407,8 @@ rfc5444_writer_create_message(struct rfc5444_writer *writer, uint8_t msgid,
 
 /**
  * Single interface selector callback for message creation
- * @param writer
- * @param interf
+ * @param writer RFC5444 writer instance
+ * @param interf RFC5444 writer target
  * @param param pointer to the specified interface
  * @return true if param equals interf, false otherwise
  */
@@ -420,9 +420,9 @@ rfc5444_writer_singletarget_selector(struct rfc5444_writer *writer __attribute__
 
 /**
  * All interface selector callback for message creation
- * @param writer
- * @param interf
- * @param param
+ * @param writer RFC5444 writer instance
+ * @param interf RFC5444 writer target
+ * @param param unused
  * @return always true
  */
 bool rfc5444_writer_alltargets_selector(struct rfc5444_writer *writer __attribute__ ((unused)),
@@ -749,7 +749,7 @@ rfc5444_writer_set_msg_originator(struct rfc5444_writer *writer,
  *
  * @param writer pointer to writer context
  * @param msg pointer to message object
- * @param hopcount
+ * @param hopcount hopcount to set
  */
 void
 rfc5444_writer_set_msg_hopcount(struct rfc5444_writer *writer __attribute__ ((unused)),
@@ -767,7 +767,7 @@ rfc5444_writer_set_msg_hopcount(struct rfc5444_writer *writer __attribute__ ((un
  *
  * @param writer pointer to writer context
  * @param msg pointer to message object
- * @param hoplimit
+ * @param hoplimit hoplimit to set
  */
 void
 rfc5444_writer_set_msg_hoplimit(struct rfc5444_writer *writer __attribute__ ((unused)),
@@ -804,7 +804,6 @@ rfc5444_writer_set_msg_seqno(struct rfc5444_writer *writer __attribute__ ((unuse
  * @param writer pointer to rfc5444 writer
  * @param last_addr pointer to last address object
  * @param common_head length of common head
- * @return common_head (might be modified common_head was 1)
  */
 static void
 _close_addrblock(struct _rfc5444_internal_addr_compress_session *acs,
@@ -846,10 +845,9 @@ _close_addrblock(struct _rfc5444_internal_addr_compress_session *acs,
  *
  * @param acs pointer to address compression session
  * @param writer pointer to rfc5444 writer
- * @param addr pointer to new address
+ * @param addr_list list of addresses
  * @param same_prefixlen number of addresses (up to this) with the same
  *   prefix length
- * @param first true if this is the first address of the message
  * @return new number of messages with same prefix length
  */
 static int
@@ -886,12 +884,11 @@ _compress_address(struct _rfc5444_internal_addr_compress_session *acs,
     printf("Compress Address %s (last: %s)\n",
         netaddr_to_string(&nbuf1, &addr->address),
         last_addr == NULL ? "" : netaddr_to_string(&nbuf2, &last_addr->address));
-    printf("\ttotal:");
+    printf("\ttotal:   ");
     for (i=0; i<addrlen; i++) {
       printf(" %4d ", acs[i].total);
     }
     printf("\n");
-    printf("\tcurrent:");
   }
 #endif
   /* add size for address part (and header if necessary) */
@@ -912,7 +909,18 @@ _compress_address(struct _rfc5444_internal_addr_compress_session *acs,
       }
     }
     _close_addrblock(acs, writer, last_addr, common_head);
+#ifdef DEBUG_OUTPUT
+    printf("\tt-closed:");
+    for (i=0; i<addrlen; i++) {
+      printf(" %4d ", acs[i].total);
+    }
+    printf("\n");
+#endif
   }
+
+#ifdef DEBUG_OUTPUT
+  printf("\tcurrent:");
+#endif
 
   /* calculate tlv flags */
   avl_for_each_element(&addr->_addrtlv_tree, tlv, addrtlv_node) {
@@ -1018,12 +1026,13 @@ _compress_address(struct _rfc5444_internal_addr_compress_session *acs,
     if (closed || acs[i].total + continue_cost > acs[addrlen-1].total + new_cost) {
       /* forget the last addresses, longer prefix is better. */
       /* store address block for later binary generation */
+#if 0
       if (last_addr) {
         last_addr->_block_start = acs[addrlen-1].ptr;
         last_addr->_block_multiple_prefixlen = acs[addrlen-1].multiplen;
         last_addr->_block_headlen = addrlen-1;
       }
-
+#endif
       /* Create a new address block */
       acs[i].ptr = addr;
       acs[i].multiplen = false;
@@ -1133,9 +1142,10 @@ _write_addresstlv(struct rfc5444_writer_tlvtype *tlvtype,
 
 /**
  * Write the address-TLVs of a specific type
- * @param addr_start first address for TLVs
- * @param addr_end last address for TLVs
- * @param tlvtype tlvtype to write into buffer
+ * @param writer RFC5444 writer instance
+ * @param msg RFC5444 message to be generated
+ * @param first first address for TLVs
+ * @param last last address for TLVs
  * @param ptr target buffer pointer
  * @return modified target buffer pointer
  */
@@ -1203,8 +1213,7 @@ _write_addresstlvs(struct rfc5444_writer *writer, struct rfc5444_writer_message 
  * Write the address blocks to the message buffer.
  * @param writer pointer to writer context
  * @param msg pointer to message context
- * @param first_addr pointer to first address to be written
- * @param last_addr pointer to last address to be written
+ * @param fragment_addrs list of fragmented addresses
  */
 static void
 _write_addresses(struct rfc5444_writer *writer, struct rfc5444_writer_message *msg,
@@ -1362,7 +1371,7 @@ _write_addresses(struct rfc5444_writer *writer, struct rfc5444_writer_message *m
 /**
  * Write header of message including mandatory tlvblock length field.
  * @param writer pointer to writer context
- * @param _msg pointer to message object
+ * @param msg pointer to message object
  */
 static void
 _write_msgheader(struct rfc5444_writer *writer, struct rfc5444_writer_message *msg) {
@@ -1411,11 +1420,11 @@ _write_msgheader(struct rfc5444_writer *writer, struct rfc5444_writer_message *m
  * Finalize a message fragment, copy it into the packet buffer and
  * cleanup message internal data.
  * @param writer pointer to writer context
- * @param _msg pointer to message object
- * @param first pointer to first address of this fragment
- * @param last pointer to last address of this fragment
+ * @param msg pointer to message object
+ * @param fragment_addrs list of fragmented addresses
  * @param not_fragmented true if this is the only fragment of this message
  * @param useIf pointer to callback for selecting outgoing _targets
+ * @param param custom parameter for callback
  */
 static void
 _finalize_message_fragment(struct rfc5444_writer *writer, struct rfc5444_writer_message *msg,

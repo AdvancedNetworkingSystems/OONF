@@ -328,7 +328,8 @@ cfg_db_find_sectiontype(const struct cfg_db *db, const char *section_type) {
 
 /**
  * Finds an unnamed section inside a section type
- * @param type pointer to section type
+ * @param db pointer to configuration database
+ * @param section_type type of section
  * @return pointer to section, NULL if not found
  */
 static INLINE struct cfg_named_section *
@@ -346,7 +347,7 @@ cfg_db_is_named_section(const struct cfg_named_section *named) {
 }
 
 /**
- * @param pointer to section type
+ * @param stype section type
  * @return pointer pointer to 'unnamed' named_section element,
  *   NULL no unnamed section.
  */

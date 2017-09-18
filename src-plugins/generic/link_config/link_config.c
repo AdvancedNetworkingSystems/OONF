@@ -231,11 +231,11 @@ _cb_delayed_config(struct oonf_timer_instance *timer __attribute__((unused))) {
 
 /**
  * Configuration subsystem validator for linkdata
- * @param entry
- * @param section_name
- * @param value
- * @param out
- * @return
+ * @param entry configuration schema entry
+ * @param section_name name of the configuration section the entry was set
+ * @param value text value of the configuration entry
+ * @param out output buffer for error messages
+ * @return -1 if validation failed, 0 otherwise
  */
 static int
 _cb_validate_linkdata(const struct cfg_schema_entry *entry,

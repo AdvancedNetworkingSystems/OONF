@@ -1144,9 +1144,9 @@ _cb_receive_data(struct oonf_packet_socket *sock,
 /**
  * Callback for sending a multicast packet to a rfc5444 target
  * @param writer rfc5444 writer
- * @param interf rfc5444 interface
+ * @param target rfc5444 target
  * @param ptr pointer to outgoing buffer
- * @param size_t length of buffer
+ * @param len length of buffer
  */
 static void
 _cb_send_multicast_packet(struct rfc5444_writer *writer __attribute__((unused)),
@@ -1176,9 +1176,9 @@ _cb_send_multicast_packet(struct rfc5444_writer *writer __attribute__((unused)),
 /**
  * Callback for sending an unicast packet to a rfc5444 target
  * @param writer rfc5444 writer
- * @param interf rfc5444 interface
+ * @param target rfc5444 target
  * @param ptr pointer to outgoing buffer
- * @param size_t length of buffer
+ * @param len length of buffer
  */
 static void
 _cb_send_unicast_packet(struct rfc5444_writer *writer __attribute__((unused)),
@@ -1207,9 +1207,9 @@ _cb_send_unicast_packet(struct rfc5444_writer *writer __attribute__((unused)),
 
 /**
  * Handle forwarding of rfc5444 messages
- * @param context
- * @param buffer
- * @param length
+ * @param context RFC5444 tlvblock reader context
+ * @param buffer message to be forwarded
+ * @param length length of message
  */
 static void
 _cb_forward_message(
@@ -1260,7 +1260,7 @@ _cb_single_target_selector(struct rfc5444_writer *writer __attribute__((unused))
 /**
  * Selector for outgoing target
  * @param writer rfc5444 writer
- * @param target rfc5444 target
+ * @param rfc5444_target rfc5444 target
  * @param ptr custom pointer, contains rfc5444 target
  * @return true if target corresponds to selection
  */
@@ -1332,7 +1332,7 @@ _alloc_addrtlv_entry(void) {
 
 /**
  * Free an addrblock entry
- * @param pointer to addrblock
+ * @param addrblock addressblock to be freed
  */
 static void
 _free_addrblock_entry(struct rfc5444_reader_addrblock_entry* addrblock) {
@@ -1341,7 +1341,7 @@ _free_addrblock_entry(struct rfc5444_reader_addrblock_entry* addrblock) {
 
 /**
  * Free a tlvblock entry
- * @param pointer to tlvblock
+ * @param tlvblock tlvblock to be freed
  */
 static void
 _free_tlvblock_entry(struct rfc5444_reader_tlvblock_entry *tlvblock) {
@@ -1349,8 +1349,8 @@ _free_tlvblock_entry(struct rfc5444_reader_tlvblock_entry *tlvblock) {
 }
 
 /**
- * Free a tlvblock entry
- * @param pointer to tlvblock
+ * Free an address
+ * @param address address to be freed
  */
 static void
 _free_address_entry(struct rfc5444_writer_address *address) {
@@ -1358,8 +1358,8 @@ _free_address_entry(struct rfc5444_writer_address *address) {
 }
 
 /**
- * Free a tlvblock entry
- * @param pointer to tlvblock
+ * Free an address tlv entry
+ * @param addrtlv address tlv entry to be freed
  */
 static void
 _free_addrtlv_entry(struct rfc5444_writer_addrtlv *addrtlv) {
@@ -1369,7 +1369,7 @@ _free_addrtlv_entry(struct rfc5444_writer_addrtlv *addrtlv) {
 /**
  * Callback to add sequence number to outgoing RFC5444 packet
  * @param writer pointer to rfc5444 writer
- * @param interf pointer to rfc5444 interface
+ * @param rfc5444_target rfc5444 target where the packet will be sent to
  */
 static void
 _cb_add_seqno(struct rfc5444_writer *writer, struct rfc5444_writer_target *rfc5444_target) {
@@ -1479,7 +1479,7 @@ interface_changed_cleanup:
 
 /**
  * Interface settings of a rfc5444 interface changed
- * @param managed
+ * @param managed managed socket which interface changed
  * @param changed true if socket addresses changed
  */
 static void

@@ -92,9 +92,10 @@ static struct neighbor_graph_interface _api_interface = {
 
 /**
  * Check if a given tuple is "reachable" according to section 18.4
- * @param mpr_data
- * @param link
- * @return 
+ * @param domain NHDP domain
+ * @param current_interface NHDP interface
+ * @param lnk NHDP link
+ * @return true if reachable, false otherwise
  */
 static bool
 _is_reachable_link_tuple(const struct nhdp_domain *domain,
@@ -102,28 +103,23 @@ _is_reachable_link_tuple(const struct nhdp_domain *domain,
   struct nhdp_link_domaindata *linkdata;
 
   linkdata = nhdp_domain_get_linkdata(domain, lnk);
-  if (lnk->local_if == current_interface
+  return lnk->local_if == current_interface
       && linkdata->metric.out <= RFC7181_METRIC_MAX
-      && lnk->status == NHDP_LINK_SYMMETRIC) {
-    return true;
-  }
-  return false;
+      && lnk->status == NHDP_LINK_SYMMETRIC;
 }
 
 /**
  * Check if a link tuple is "allowed" according to section 18.4
- * @param mpr_data
- * @param link
- * @return 
+ * @param domain NHDP domain
+ * @param current_interface NHDP interface
+ * @param lnk NHDP link
+ * @return true if link tuple is allowed, false otherwise
  */
 static bool
 _is_allowed_link_tuple(const struct nhdp_domain *domain,
     struct nhdp_interface *current_interface, struct nhdp_link *lnk) {
-  if (_is_reachable_link_tuple(domain, current_interface, lnk)
-      && lnk->flooding_willingness > RFC7181_WILLINGNESS_NEVER) {
-    return true;
-  }
-  return false;
+  return _is_reachable_link_tuple(domain, current_interface, lnk)
+      && lnk->flooding_willingness > RFC7181_WILLINGNESS_NEVER;
 }
 
 static bool
@@ -132,11 +128,8 @@ _is_allowed_2hop_tuple(const struct nhdp_domain *domain,
   struct nhdp_l2hop_domaindata *twohopdata;
 
   twohopdata = nhdp_domain_get_l2hopdata(domain, two_hop);
-  if (two_hop->link->local_if == current_interface
-      && twohopdata->metric.out <= RFC7181_METRIC_MAX) {
-    return true;
-  }
-  return false;
+  return two_hop->link->local_if == current_interface
+      && twohopdata->metric.out <= RFC7181_METRIC_MAX;
 }
 
 static uint32_t
@@ -202,9 +195,10 @@ _calculate_d_x_y(const struct nhdp_domain *domain,
 
 /**
  * Calculate d1(x) according to section 18.2 (draft 19)
- * @param mpr_data
- * @param addr
- * @return 
+ * @param domain NHDP domain
+ * @param graph neighbor graph instance
+ * @param addr node address
+ * @return distance of node
  */
 uint32_t
 _calculate_d1_x_of_n2_addr(const struct nhdp_domain *domain,
@@ -230,7 +224,8 @@ _calculate_d1_x_of_n2_addr(const struct nhdp_domain *domain,
 
 /**
  * Calculate N1
- * @param interf
+ * @param domain NHDP domain
+ * @param data flooding data
  */
 static void
 _calculate_n1(const struct nhdp_domain *domain, struct mpr_flooding_data *data) {
@@ -259,8 +254,8 @@ _calculate_n1(const struct nhdp_domain *domain, struct mpr_flooding_data *data) 
  * Note that N1 is generated per-interface, so we don't need to deal with 
  * multiple links to the same N1 member.
  * 
- * @param set_n1 N1 Set
- * @return 
+ * @param domain NHDP domain
+ * @param data flooding data
  */
 static void
 _calculate_n2(const struct nhdp_domain *domain, struct mpr_flooding_data *data) {
@@ -282,9 +277,9 @@ _calculate_n2(const struct nhdp_domain *domain, struct mpr_flooding_data *data) 
 
 /**
  * Returns the flooding/routing willingness of an N1 neighbor
- * @param not used
- * @param node
- * @return 
+ * @param domain NHDP domain
+ * @param node NHDP node
+ * @return flooding willingness of NHDP node
  */
 static uint32_t
 _get_willingness_n1(const struct nhdp_domain *domain __attribute__((unused)),

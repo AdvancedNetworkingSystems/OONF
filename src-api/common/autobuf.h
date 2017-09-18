@@ -89,7 +89,7 @@ EXPORT void abuf_hexdump(struct autobuf *out,
 
 /**
  * Clears the content of an autobuf
- * @param autobuf
+ * @param autobuf autobuffer instance
  */
 static INLINE void
 abuf_clear(struct autobuf *autobuf) {
@@ -99,7 +99,7 @@ abuf_clear(struct autobuf *autobuf) {
 }
 
 /**
- * @param autobuf pointer to autobuf
+ * @param autobuf autobuffer instance
  * @return pointer to internal bufffer memory
  */
 static INLINE char *
@@ -108,7 +108,7 @@ abuf_getptr(struct autobuf *autobuf) {
 }
 
 /**
- * @param autobuf pointer to autobuf
+ * @param autobuf autobuffer instance
  * @return number of bytes stored in autobuf
  */
 static INLINE size_t
@@ -117,7 +117,7 @@ abuf_getlen(struct autobuf *autobuf) {
 }
 
 /**
- * @param autobuf pointer to autobuf
+ * @param autobuf autobuffer instance
  * @return number of bytes allocated in buffer
  */
 static INLINE size_t
@@ -126,9 +126,11 @@ abuf_getmax(struct autobuf *autobuf) {
 }
 
 /**
- *
- * @param autobuf
- * @param len
+ * set the length of the autobuffer, will truncate the length
+ * by the total amount of memory in the buffer. Normally used
+ * to shorten a buffer.
+ * @param autobuf autobuffer instance
+ * @param len new length of the autobuffer
  */
 static INLINE void
 abuf_setlen(struct autobuf * autobuf, size_t len) {
@@ -141,7 +143,7 @@ abuf_setlen(struct autobuf * autobuf, size_t len) {
 
 /**
  * Append a single byte to an autobuffer
- * @param autobuf
+ * @param autobuf autobuffer instance
  * @param c byte to append
  * @return -1 if an error happened, 0 otherwise
  */
@@ -152,7 +154,7 @@ abuf_append_uint8(struct autobuf *autobuf, const uint8_t c) {
 
 /**
  * Append a uint16 to an autobuffer
- * @param autobuf
+ * @param autobuf autobuffer instance
  * @param s uint16 to append
  * @return -1 if an error happened, 0 otherwise
  */
@@ -163,7 +165,7 @@ abuf_append_uint16(struct autobuf *autobuf, const uint16_t s) {
 
 /**
  * Append a uint32 to an autobuffer
- * @param autobuf
+ * @param autobuf autobuffer instance
  * @param l uint32 to append
  * @return -1 if an error happened, 0 otherwise
  */
@@ -173,7 +175,7 @@ abuf_append_uint32(struct autobuf *autobuf, const uint32_t l) {
 }
 
 /**
- * @param autobuf
+ * @param autobuf autobuffer instance
  * @return true if an autobuf function failed
  *  since the last cleanup of the stream
  */

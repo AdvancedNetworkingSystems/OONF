@@ -291,9 +291,9 @@ _cb_set_linkcost(struct oonf_timer_instance *ptr __attribute__((unused))) {
 /**
  * compare two linkcosts with each other by comparing
  * interface name and neighbor IP
- * @param ptr1
- * @param ptr2
- * @return
+ * @param ptr1 first linkcost data
+ * @param ptr2 second linkcost data
+ * @return -1/0/1 depending on comparision of both
  */
 static int
 _avlcmp_linkcost(const void *ptr1, const void *ptr2) {
@@ -312,11 +312,11 @@ _avlcmp_linkcost(const void *ptr1, const void *ptr2) {
 
 /**
  * Validate configuration parameter for a constant metric
- * @param entry
- * @param section_name
- * @param value
- * @param out
- * @return
+ * @param entry configuration schema entry
+ * @param section_name name of section the entry was set
+ * @param value value of the entry
+ * @param out output buffer for error messages
+ * @return -1 if validation failed, 0 otherwise
  */
 static int
 _cb_validate_link(const struct cfg_schema_entry *entry,

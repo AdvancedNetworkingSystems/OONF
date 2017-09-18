@@ -167,6 +167,7 @@ EXPORT extern const struct netaddr NETADDR_IPV6_GLOBAL;
 EXPORT extern const struct netaddr NETADDR_IPV6_IPV4COMPATIBLE;
 EXPORT extern const struct netaddr NETADDR_IPV6_IPV4MAPPED;
 EXPORT extern const struct netaddr NETADDR_IPV6_LOOPBACK;
+EXPORT extern const struct netaddr NETADDR_MAC48_BROADCAST;
 
 EXPORT extern const union netaddr_socket NETADDR_SOCKET_IPV4_ANY;
 EXPORT extern const union netaddr_socket NETADDR_SOCKET_IPV6_ANY;
@@ -338,9 +339,9 @@ netaddr_cmp(const struct netaddr *a1, const struct netaddr *a2) {
 
 /**
  * Compares two sockets.
- * @param a1 address 1
- * @param a2 address 2
- * @return >0 if a1>a2, <0 if a1<a2, 0 otherwise
+ * @param s1 socket address port 1
+ * @param s2 socket address/port 2
+ * @return >0 if s1>s2, <0 if s1<s2, 0 otherwise
  */
 static INLINE int
 netaddr_socket_cmp(const union netaddr_socket *s1, const union netaddr_socket *s2) {
@@ -385,7 +386,7 @@ netaddr_get_prefix_length(const struct netaddr *n) {
 
 /**
  * @param n pointer to netaddr
- * @param prefix_length new prefix length
+ * @param prefix_len new prefix length
  */
 static INLINE void
 netaddr_set_prefix_length(struct netaddr *n, uint8_t prefix_len) {

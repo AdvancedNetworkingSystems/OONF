@@ -56,8 +56,8 @@
  * @param size minimum size of block
  * @return rounded up block size of STRARRAY_BLOCKSIZE
  */
-static INLINE size_t STRARRAY_MEMSIZE(const size_t b) {
-  return (b + STRARRAY_BLOCKSIZE-1) & (~(STRARRAY_BLOCKSIZE - 1));
+static INLINE size_t STRARRAY_MEMSIZE(const size_t size) {
+  return (size + STRARRAY_BLOCKSIZE-1) & (~(STRARRAY_BLOCKSIZE - 1));
 }
 
 /**

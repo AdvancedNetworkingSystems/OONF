@@ -173,6 +173,9 @@ struct os_interface {
   /*! tree of all addresses/prefixes of this interface */
   struct avl_tree addresses;
 
+  /*! tree of all peer addresses/prefixes of this interface */
+  struct avl_tree peers;
+
   /*! listeners to be informed when an interface changes */
   struct list_entity _listeners;
 

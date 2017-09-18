@@ -117,9 +117,9 @@ uint32_t mpr_calculate_minimal_d_z_y(const struct nhdp_domain *,
 
 void mpr_print_addr_set(struct avl_tree *set);
 
-void mpr_print_n1_set(struct avl_tree *set);
+void mpr_print_n1_set(struct nhdp_domain *domain, struct avl_tree *set);
 
-void mpr_print_sets(struct neighbor_graph *graph);
+void mpr_print_sets(struct nhdp_domain *, struct neighbor_graph *graph);
 
 uint32_t mpr_calculate_d_of_y_s(const struct nhdp_domain *domain, struct neighbor_graph *graph, struct addr_node *y, struct avl_tree *subset_s);
 

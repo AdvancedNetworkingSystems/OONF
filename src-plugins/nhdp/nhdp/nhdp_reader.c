@@ -250,7 +250,7 @@ _cleanup_error(void) {
  * Process an address with a LOCAL_IF TLV
  * @param addr pointer to netaddr object with address
  * @param local_if value of LOCAL_IF TLV
- * @return
+ * @return RFC5444 processing result
  */
 static enum rfc5444_result
 _pass2_process_localif(struct netaddr *addr, uint8_t local_if) {
@@ -360,8 +360,7 @@ _handle_originator(struct rfc5444_reader_tlvblock_context *context) {
 
 /**
  * Handle in HELLO messages and its TLVs
- * @param consumer tlvblock consumer
- * @param context message context
+ * @param context tlvblock reader context
  * @return see rfc5444_result enum
  */
 static enum rfc5444_result
@@ -471,6 +470,11 @@ _cb_messagetlvs(struct rfc5444_reader_tlvblock_context *context) {
   return RFC5444_OKAY;
 }
 
+/**
+ * Called if the constraints for the tlv block are not valid
+ * @param context tlv block reader context
+ * @return see rfc5444_result enum
+ */
 static enum rfc5444_result
 _cb_failed_constraints(struct rfc5444_reader_tlvblock_context *context __attribute__((unused))) {
 #ifdef OONF_LOG_INFO
@@ -486,9 +490,8 @@ _cb_failed_constraints(struct rfc5444_reader_tlvblock_context *context __attribu
 
 /**
  * Process addresses of NHDP Hello message to determine link/neighbor status
- * @param consumer
- * @param context
- * @return
+ * @param context tlv block reader context
+ * @return see rfc5444_result enum
  */
 static enum rfc5444_result
 _cb_addresstlvs_pass1(struct rfc5444_reader_tlvblock_context *context) {
@@ -590,10 +593,9 @@ _cb_addresstlvs_pass1(struct rfc5444_reader_tlvblock_context *context) {
 /**
  * Handle end of message for pass1 processing. Create link/neighbor if necessary,
  * mark addresses as potentially lost.
- * @param consumer
- * @param context
- * @param dropped
- * @return
+ * @param context tlv block reader context
+ * @param dropped true if block was dropped by another callback
+ * @return see rfc5444_result enum
  */
 static enum rfc5444_result
 _cb_addresstlvs_pass1_end(struct rfc5444_reader_tlvblock_context *context, bool dropped) {
@@ -793,9 +795,8 @@ _process_domainspecific_2hopdata(struct nhdp_l2hop *l2hop,
 /**
  * Second pass for processing the addresses of the NHDP Hello. This one will update
  * the database
- * @param consumer
- * @param context
- * @return
+ * @param context tlv block reader context
+ * @return see rfc5444_result enum
  */
 static enum rfc5444_result
 _cb_addr_pass2_block(struct rfc5444_reader_tlvblock_context *context) {
@@ -872,10 +873,9 @@ _cb_addr_pass2_block(struct rfc5444_reader_tlvblock_context *context) {
 
 /**
  * Finalize changes of the database and update the status of the link
- * @param consumer
- * @param context
- * @param dropped
- * @return
+ * @param context tlv block reader context
+ * @param dropped true if context was dropped by a callback
+ * @return see rfc5444_result enum
  */
 static enum rfc5444_result
 _cb_msg_pass2_end(struct rfc5444_reader_tlvblock_context *context, bool dropped) {
@@ -976,8 +976,9 @@ _cb_msg_pass2_end(struct rfc5444_reader_tlvblock_context *context, bool dropped)
   /* update link status */
   nhdp_db_link_update_status(_current.link);
 
-  /* update MPR sets and link metrics */
-  nhdp_domain_recalculate_mpr(false);
+  /* update link metrics and MPR */
+  nhdp_domain_recalculate_metrics(NULL, _current.neighbor);
+  nhdp_domain_delayed_mpr_recalculation(NULL, _current.neighbor);
 
   return RFC5444_OKAY;
 }

@@ -141,13 +141,15 @@ _initiate_shutdown(void) {
  * Add a socket handler to the scheduler
  *
  * @param entry pointer to initialized socket entry
- * @return -1 if an error happened, 0 otherwise
  */
 void
 oonf_socket_add(struct oonf_socket_entry *entry)
 {
   OONF_DEBUG(LOG_SOCKET, "Adding socket entry %d to scheduler\n",
       os_fd_get_fd(&entry->fd));
+
+  assert (entry->name);
+  assert (entry->name[0]);
 
   list_add_before(&_socket_head, &entry->_node);
   os_fd_event_socket_add(&_socket_events, &entry->fd);
@@ -169,16 +171,35 @@ oonf_socket_remove(struct oonf_socket_entry *entry)
   }
 }
 
+/**
+ * @return list of all registered sockets
+ */
+struct list_entity *
+oonf_socket_get_list(void) {
+  return &_socket_head;
+}
+
+/**
+ * @param entry socket entry
+ * @param event_read true to enable read events, false to disable
+ */
 void
 oonf_socket_set_read(struct oonf_socket_entry *entry, bool event_read) {
   os_fd_event_socket_read(&_socket_events, &entry->fd, event_read);
 }
 
+/**
+ * @param entry socket entry
+ * @param event_write true to enable write events, false to disable
+ */
 void
 oonf_socket_set_write(struct oonf_socket_entry *entry, bool event_write) {
   os_fd_event_socket_write(&_socket_events, &entry->fd, event_write);
 }
 
+/**
+ * @return true if scheduler should stop
+ */
 static bool
 _shall_end_scheduler(void) {
   return _scheduler_time_limit == ~0ull && oonf_main_shall_stop_scheduler();
@@ -255,18 +276,28 @@ _handle_scheduling(void)
           continue;
         }
 
-        OONF_DEBUG(LOG_SOCKET, "Socket %d triggered (read=%s, write=%s)",
+        OONF_DEBUG(LOG_SOCKET, "Socket '%s' (%d) triggered (read=%s, write=%s)",
+            sock_entry->name,
             os_fd_get_fd(&sock_entry->fd),
             os_fd_event_is_read(sock) ? "true" : "false",
-            os_fd_event_is_write(sock) ? "true" : "false");
+                os_fd_event_is_write(sock) ? "true" : "false");
 
+        /* handle statistics */
+        if (os_fd_event_is_read(sock)) {
+          sock_entry->_stat_recv++;
+        }
+        if (os_fd_event_is_write(sock)) {
+          sock_entry->_stat_send++;
+        }
         os_clock_gettime64(&start_time);
         sock_entry->process(sock_entry);
         os_clock_gettime64(&end_time);
 
         if (end_time - start_time > OONF_TIMER_SLICE) {
-          OONF_WARN(LOG_SOCKET, "Socket %d scheduling took %"PRIu64" ms",
+          OONF_WARN(LOG_SOCKET, "Socket '%s' (%d) scheduling took %"PRIu64" ms",
+              sock_entry->name,
               os_fd_get_fd(&sock_entry->fd), end_time - start_time);
+          sock_entry->_stat_long++;
         }
       }
     }

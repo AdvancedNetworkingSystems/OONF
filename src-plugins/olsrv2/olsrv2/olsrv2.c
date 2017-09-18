@@ -109,6 +109,9 @@ struct _config {
   /*! olsrv2 p_hold_time */
   uint64_t p_hold_time;
 
+  /*! olsrv2 factor of a_hold_time in terms of tc_intervals */
+  uint64_t a_hold_time_factor;
+
   /*! decides NHDP routable status */
   bool nhdp_routable;
 
@@ -185,6 +188,8 @@ static struct cfg_schema_entry _olsrv2_entries[] = {
     "Holdtime for forwarding set information", 100),
   CFG_MAP_CLOCK_MIN(_config, p_hold_time, "processing_hold_time", "300.0",
     "Holdtime for processing set information", 100),
+  CFG_MAP_INT64_MINMAX(_config, a_hold_time_factor, "advertisement_hold_time_factor", "3",
+    "Holdtime for TC advertisements as a factor of TC interval time", false, false, 1, 255),
   CFG_MAP_BOOL(_config, nhdp_routable, "nhdp_routable", "no",
     "Decides if NHDP interface addresses"
     " are routed to other nodes. 'true' means the 'routable_acl' parameter"
@@ -235,6 +240,9 @@ static struct oonf_subsystem _olsrv2_subsystem = {
 };
 DECLARE_OONF_PLUGIN(_olsrv2_subsystem);
 
+/*! last time a TC was advertised because of MPR or LANs */
+static uint64_t _unadvertised_tc_count;
+
 static struct _config _olsrv2_config;
 
 /* timer for TC generation */
@@ -260,10 +268,10 @@ static struct oonf_rfc5444_protocol *_protocol;
 static bool _generate_tcs = true;
 
 /* Additional logging sources */
-static enum oonf_log_source LOG_OLSRV2;
-static enum oonf_log_source LOG_OLSRV2_R;
-static enum oonf_log_source LOG_OLSRV2_ROUTING;
-static enum oonf_log_source LOG_OLSRV2_W;
+enum oonf_log_source LOG_OLSRV2;
+enum oonf_log_source LOG_OLSRV2_R;
+enum oonf_log_source LOG_OLSRV2_ROUTING;
+enum oonf_log_source LOG_OLSRV2_W;
 
 /**
  * Initialize additional logging sources for NHDP
@@ -381,9 +389,9 @@ olsrv2_is_routable(struct netaddr *addr) {
 /**
  * default implementation for rfc5444 processing handling according
  * to MPR settings.
- * @param context
- * @param vtime
- * @return
+ * @param context RFC5444 tlvblock reader context
+ * @param vtime validity time for duplicate entry data
+ * @return true if TC should be processed, false otherwise
  */
 bool
 olsrv2_mpr_shall_process(
@@ -746,6 +754,13 @@ _parse_lan_array(struct cfg_named_section *section, bool add) {
 static void
 _cb_generate_tc(struct oonf_timer_instance *ptr __attribute__((unused))) {
   if (nhdp_domain_node_is_mpr() || !avl_is_empty(olsrv2_lan_get_tree())) {
+    _unadvertised_tc_count = 0;
+  }
+  else {
+    _unadvertised_tc_count++;
+  }
+
+  if (_unadvertised_tc_count <= _olsrv2_config.a_hold_time_factor) {
     olsrv2_writer_send_tc();
   }
 }
@@ -863,7 +878,7 @@ _update_originator(int af_family) {
 
 /**
  * Callback for interface events
- * @param listener pointer to interface listener
+ * @param if_listener interface listener
  * @return always 0
  */
 static int

@@ -172,7 +172,7 @@ nhdp_writer_send_hello(struct nhdp_interface *ninterf) {
   OONF_DEBUG(LOG_NHDP_W, "Sending Hello to interface %s",
       nhdp_interface_get_name(ninterf));
 
-  nhdp_domain_recalculate_mpr(false);
+  nhdp_domain_recalculate_mpr();
 
   /* store NHDP interface */
   _nhdp_if = ninterf;
@@ -204,8 +204,8 @@ nhdp_writer_set_mac_TLV_state(bool active) {
 
 /**
  * Callback to initialize the message header for a HELLO message
- * @param writer
- * @param message
+ * @param writer RFC5444 writer instance
+ * @param message RFC5444 message
  */
 static int
 _cb_addMessageHeader(struct rfc5444_writer *writer,
@@ -252,8 +252,7 @@ _cb_addMessageHeader(struct rfc5444_writer *writer,
 
 /**
  * Callback to add the message TLVs to a HELLO message
- * @param writer
- * @param prv
+ * @param writer RFC5444 writer
  */
 static void
 _cb_addMessageTLVs(struct rfc5444_writer *writer) {
@@ -312,7 +311,7 @@ _cb_addMessageTLVs(struct rfc5444_writer *writer) {
   /* add mac address of local interface */
   os_if = nhdp_interface_get_if_listener(_nhdp_if)->data;
 
-  if (_add_mac_tlv) {
+  if (_add_mac_tlv && netaddr_get_address_family(&os_if->mac) == AF_MAC48) {
     rfc5444_writer_add_messagetlv(writer, NHDP_MSGTLV_MAC, 0,
         netaddr_get_binptr(&os_if->mac), netaddr_get_binlength(&os_if->mac));
   }
@@ -320,10 +319,10 @@ _cb_addMessageTLVs(struct rfc5444_writer *writer) {
 
 /**
  * Add a rfc5444 address with localif TLV to the stream
- * @param writer
- * @param prv
- * @param interf
- * @param addr
+ * @param writer RFC5444 writer instance
+ * @param prv RFC5444 content provider instance
+ * @param interf NHDP interface
+ * @param addr NHDP interface address
  */
 static void
 _add_localif_address(struct rfc5444_writer *writer, struct rfc5444_writer_content_provider *prv,
@@ -361,10 +360,10 @@ _add_localif_address(struct rfc5444_writer *writer, struct rfc5444_writer_conten
 
 /**
  * Add a rfc5444 address with link_status or other_neigh TLV to the stream
- * @param writer
- * @param prv
- * @param interf
- * @param naddr
+ * @param writer RFC5444 writer instance
+ * @param prv RFC5444 content provider instance
+ * @param interf NHDP interface
+ * @param naddr NHDP interface address
  */
 static void
 _add_link_address(struct rfc5444_writer *writer, struct rfc5444_writer_content_provider *prv,
@@ -449,11 +448,11 @@ _add_link_address(struct rfc5444_writer *writer, struct rfc5444_writer_content_p
 
 /**
  * Write up to four metric TLVs to an address
- * @param writer rfc5444 writer
+ * @param writer rfc5444 writer instance
  * @param addr rfc5444 address
- * @param neigh pointer to symmetric neighbor, might be NULL
- * @param lnk pointer to symmetric link, might be NULL
- * @param handler pointer to link metric handler
+ * @param neigh symmetric NHDP neighbor, might be NULL
+ * @param lnk symmetric NHDP link, might be NULL
+ * @param domain NHDP domain
  */
 static void
 _write_metric_tlv(struct rfc5444_writer *writer, struct rfc5444_writer_address *addr,
@@ -549,7 +548,7 @@ _write_metric_tlv(struct rfc5444_writer *writer, struct rfc5444_writer_address *
 }
 /**
  * Callback to add the addresses and address TLVs to a HELLO message
- * @param writer
+ * @param writer RFC5444 writer instance
  */
 void
 _cb_addAddresses(struct rfc5444_writer *writer) {

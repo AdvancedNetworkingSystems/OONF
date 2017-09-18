@@ -193,7 +193,7 @@ _cleanup(void) {
 /**
  * Callback for Dijkstra code to see which route should be changed
  * @param domain pointer to domain of route
- * @param route routing data
+ * @param route_param routing data
  * @param set true if route will be set, false otherwise
  * @return always true (we never drop a route)
  */

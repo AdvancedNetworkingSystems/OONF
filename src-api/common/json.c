@@ -222,7 +222,6 @@ _add_template(struct autobuf *out, bool brackets,
  * @param out pointer to output buffer
  * @param txt string to print
  * @param delimiter true if string must be enclosed in quotation marks
- * @return -1 if an error happened, 0 otherwise
  */
 static void
 _json_printvalue(struct autobuf *out, const char *txt, bool delimiter) {

@@ -89,34 +89,32 @@ static struct neighbor_graph_interface _rt_api_interface = {
 
 /**
  * Check if a given tuple is "reachable" according to section 18.4
- * @param mpr_data
- * @param link
- * @return 
+ * @param neigh NHDP neighbor
+ * @return true if reachable, false otherwise
  */
 static bool
-_is_reachable_neighbor_tuple(struct nhdp_neighbor *neigh) {
-  if (neigh->_domaindata[0].metric.in <= RFC7181_METRIC_MAX
-      && neigh->symmetric > 0) {
-    return true;
-  }
-  return false;
+_is_reachable_neighbor_tuple(const struct nhdp_domain *domain, struct nhdp_neighbor *neigh) {
+  struct nhdp_neighbor_domaindata *neighbordata;
+  neighbordata = nhdp_domain_get_neighbordata(domain, neigh);
+
+  return neighbordata->metric.in <= RFC7181_METRIC_MAX
+      && neigh->symmetric > 0;
 }
 
 /**
- * Check if a link tuple is "allowed" according to section 18.4
- * @param mpr_data
- * @param link
- * @return 
+ * Check if a neighbor tuple is "allowed" according to section 18.4
+ * @param domain NHDP domain
+ * @param neigh NHDP neighbor
+ * @return true if allowed, false otherwise
  */
 static bool
-_is_allowed_neighbor_tuple(const struct nhdp_domain *domain __attribute__((unused)),
+_is_allowed_neighbor_tuple(const struct nhdp_domain *domain,
     struct nhdp_neighbor *neigh) {
-  if (_is_reachable_neighbor_tuple(neigh)) {
-    // FIXME Willingness handling appears to be broken; routing willingness is always 0
-    //      && neigh->_domaindata[0].willingness > RFC5444_WILLINGNESS_NEVER) {
-    return true;
-  }
-  return false;
+  struct nhdp_neighbor_domaindata *neighbordata;
+
+  neighbordata = nhdp_domain_get_neighbordata(domain, neigh);
+  return _is_reachable_neighbor_tuple(domain, neigh)
+      && neighbordata->willingness > RFC7181_WILLINGNESS_NEVER;
 }
 
 static bool
@@ -130,17 +128,14 @@ static bool
 _is_allowed_2hop_tuple(const struct nhdp_domain *domain, struct nhdp_l2hop *two_hop) {
   struct nhdp_l2hop_domaindata *neighdata;
   neighdata = nhdp_domain_get_l2hopdata(domain, two_hop);
-  if (neighdata->metric.in <= RFC7181_METRIC_MAX) {
-    return true;
-  }
-  return false;
+  return neighdata->metric.in <= RFC7181_METRIC_MAX;
 }
 
 /**
  * Calculate d1(x) according to section 18.2 (draft 19)
- * @param mpr_data
- * @param x
- * @return 
+ * @param domain NHDP domain
+ * @param x node x
+ * @return metric distance
  */
 static uint32_t
 _calculate_d1_x(const struct nhdp_domain *domain, struct n1_node *x) {
@@ -152,9 +147,10 @@ _calculate_d1_x(const struct nhdp_domain *domain, struct n1_node *x) {
 
 /**
  * Calculate d2(x,y) according to section 18.2 (draft 19)
- * @param x
- * @param y
- * @return 
+ * @param domain NHDP domain
+ * @param x node x
+ * @param y node y
+ * @return metric distance
  */
 static uint32_t
 _calculate_d2_x_y(const struct nhdp_domain *domain, struct n1_node *x, struct addr_node *y) {
@@ -213,8 +209,10 @@ _calculate_d_x_y(const struct nhdp_domain *domain,
 
 /**
  * Calculate d1(y) according to section 18.2 (draft 19)
- * @param mpr_data
- * @return 
+ * @param domain NHDP domain
+ * @param graph neighbor graph instance
+ * @param y node y
+ * @return metric distance
  */
 static uint32_t
 _calculate_d1_of_y(const struct nhdp_domain *domain,
@@ -237,9 +235,10 @@ _calculate_d1_of_y(const struct nhdp_domain *domain,
 
 /**
  * Calculate d1(x) according to section 18.2 (draft 19)
- * @param mpr_data
- * @param addr
- * @return 
+ * @param domain NHDP domain
+ * @param graph neighbor graph instance
+ * @param addr node address
+ * @return metric distance
  */
 static uint32_t
 _calculate_d1_x_of_n2_addr(const struct nhdp_domain *domain,
@@ -253,7 +252,8 @@ _calculate_d1_x_of_n2_addr(const struct nhdp_domain *domain,
 
 /**
  * Calculate N1
- * @param interf
+ * @param domain NHDP domain
+ * @param graph neighbor graph instance
  */
 static void
 _calculate_n1(const struct nhdp_domain *domain, struct neighbor_graph *graph) {
@@ -271,7 +271,7 @@ _calculate_n1(const struct nhdp_domain *domain, struct neighbor_graph *graph) {
     neigh->selection_is_mpr = false;
     if (_is_allowed_neighbor_tuple(domain, neigh)) {
       OONF_DEBUG(LOG_MPR, "Add neighbor %s in: %u", netaddr_to_string(&buf1, &neigh->originator),
-                 neigh->_domaindata[0].metric.in);
+          nhdp_domain_get_neighbordata(domain, neigh)->metric.in);
       mpr_add_n1_node_to_set(&graph->set_n1, neigh, NULL, 0);
     }
   }
@@ -323,9 +323,9 @@ _calculate_n2(const struct nhdp_domain *domain, struct neighbor_graph *graph) {
 
 /**
  * Returns the flooding/routing willingness of an N1 neighbor
- * @param not used
- * @param node
- * @return 
+ * @param domain NHDP domain
+ * @param node neighbor node
+ * @return willingness
  */
 static uint32_t
 _get_willingness_n1(const struct nhdp_domain *domain, struct n1_node *node) {

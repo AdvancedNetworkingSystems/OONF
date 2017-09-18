@@ -99,7 +99,7 @@ cfg_cmp_keys(const char *str1, const char *str2) {
 
 /**
  * Checks if a string value represents a positive boolean value
- * @param pointer to string
+ * @param value string representation of boolean
  * @return boolean value of the string representation
  */
 static INLINE bool
@@ -109,7 +109,7 @@ cfg_get_bool(const char *value) {
 
 /**
  * Checks if a string value represents a boolean value
- * @param pointer to string
+ * @param value string value that might contain a boolean text representation
  * @return true if string is a boolean, false otherwise
  */
 static INLINE bool

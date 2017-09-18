@@ -267,8 +267,8 @@ oonf_telnet_execute(const char *cmd, const char *para,
 
 /**
  * AVL tree comparator for first word in case insensitive strings.
- * @param txt1 pointer to string 1
- * @param txt2 pointer to string 2
+ * @param ptr1 pointer to string 1
+ * @param ptr2 pointer to string 2
  * @return +1 if k1>k2, -1 if k1<k2, 0 if k1==k2
  */
 static int

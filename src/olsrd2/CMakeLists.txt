@@ -57,6 +57,7 @@ IF (NOT OONF_STATIC_PLUGINS)
                              lan_import
                              auto_ll4
                              http
+                             remotecontrol
                              )
 ENDIF (NOT OONF_STATIC_PLUGINS)
 

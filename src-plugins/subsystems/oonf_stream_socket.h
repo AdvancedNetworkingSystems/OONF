@@ -111,6 +111,9 @@ struct oonf_stream_session {
    */
   struct os_fd copy_fd;
 
+  /*! name of socket */
+  char socket_name[sizeof(struct netaddr_str)*2 + 10];
+
   /*! number of bytes already copied in file upload */
   size_t copy_bytes_sent;
 
@@ -248,6 +251,9 @@ struct oonf_stream_socket {
 
   /*! optional back pointer for managed tcp sockets */
   struct oonf_stream_managed *managed;
+
+  /*! name of socket */
+  char socket_name[sizeof(struct netaddr_str)+14];
 
   /*! number of currently active sessions */
   int32_t session_counter;

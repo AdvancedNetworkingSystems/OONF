@@ -97,6 +97,9 @@ struct _olsrv2_data {
 
   /*! number of entries in MPR type value */
   size_t mprtypes_size;
+
+  /*! true if a change happened for this domain */
+  bool changed[NHDP_MAXIMUM_DOMAINS];
 };
 
 /* Prototypes */
@@ -185,8 +188,8 @@ olsrv2_reader_cleanup(void) {
 
 /**
  * Callback that parses message TLVs of TC
- * @param context
- * @return
+ * @param context RFC5444 tlvblock reader context
+ * @return see rfc5444_result enum
  */
 static enum rfc5444_result
 _cb_messagetlvs(struct rfc5444_reader_tlvblock_context *context) {
@@ -331,8 +334,8 @@ _cb_messagetlvs(struct rfc5444_reader_tlvblock_context *context) {
 
 /**
  * Callback that parses address TLVs of TC
- * @param context
- * @return
+ * @param context RFC5444 tlvblock reader context
+ * @return see rfc5444_result enum
  */
 static enum rfc5444_result
 _cb_addresstlvs(struct rfc5444_reader_tlvblock_context *context __attribute__((unused))) {
@@ -397,15 +400,19 @@ _cb_addresstlvs(struct rfc5444_reader_tlvblock_context *context __attribute__((u
 
         for (i=0; i<NHDP_MAXIMUM_DOMAINS; i++) {
           if (cost_out[i] <= RFC7181_METRIC_MAX) {
+            _current.changed[i] |= (edge->cost[i] != cost_out[i]);
             edge->cost[i] = cost_out[i];
           }
           else if (_current.complete_tc) {
+            _current.changed[i] |= (edge->cost[i] != RFC7181_METRIC_INFINITE);
             edge->cost[i] = RFC7181_METRIC_INFINITE;
           }
           if (edge->inverse->virtual && cost_in[i] <= RFC7181_METRIC_MAX) {
+            _current.changed[i] |= (edge->inverse->cost[i] != cost_in[i]);
             edge->inverse->cost[i] = cost_in[i];
           }
           else if (edge->inverse->virtual && _current.complete_tc) {
+            _current.changed[i] |= (edge->inverse->cost[i] != RFC7181_METRIC_INFINITE);
             edge->inverse->cost[i] = RFC7181_METRIC_INFINITE;
           }
         }
@@ -419,9 +426,11 @@ _cb_addresstlvs(struct rfc5444_reader_tlvblock_context *context __attribute__((u
         end->ansn = _current.node->ansn;
         for (i=0; i< NHDP_MAXIMUM_DOMAINS; i++) {
           if (cost_out[i] <= RFC7181_METRIC_MAX) {
+            _current.changed[i] |= (end->cost[i] != cost_out[i]);
             end->cost[i] = cost_out[i];
           }
           else if (_current.complete_tc) {
+            _current.changed[i] |= (end->cost[i] != RFC7181_METRIC_INFINITE);
             end->cost[i] = RFC7181_METRIC_INFINITE;
           }
         }
@@ -512,9 +521,9 @@ _handle_gateways(struct rfc5444_reader_tlvblock_entry *tlv,
 
 /**
  * Callback that is called when message parsing of TLV is finished
- * @param context
- * @param dropped
- * @return
+ * @param context tlv block reader context
+ * @param dropped true if context was dropped by a callback
+ * @return see rfc5444_result enum
  */
 static enum rfc5444_result
 _cb_messagetlvs_end(struct rfc5444_reader_tlvblock_context *context __attribute__((unused)),
@@ -566,8 +575,11 @@ _cb_messagetlvs_end(struct rfc5444_reader_tlvblock_context *context __attribute_
   olsrv2_tc_trigger_change(_current.node);
   _current.node = NULL;
 
-  /* recalculate routing table */
-  olsrv2_routing_trigger_update();
+  list_for_each_element(nhdp_domain_get_list(), domain, _node) {
+    if (_current.changed[domain->index]) {
+      olsrv2_routing_domain_changed(domain);
+    }
+  }
 
   return RFC5444_OKAY;
 }

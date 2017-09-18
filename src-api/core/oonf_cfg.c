@@ -275,7 +275,6 @@ oonf_cfg_load_subsystems(void) {
     }
 
     if (!found) {
-      /* TODO: initiate shutdown */
       /* if not, unload it (if not static) */
       oonf_subsystem_unload(plugin);
     }

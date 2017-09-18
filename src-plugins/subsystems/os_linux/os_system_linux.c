@@ -327,6 +327,7 @@ os_system_linux_netlink_add(struct os_system_netlink *nl, int protocol) {
     goto os_add_netlink_fail;
   }
 
+  nl->socket.name = "os_system_netlink";
   nl->socket.process = _netlink_handler;
   oonf_socket_add(&nl->socket);
   oonf_socket_set_read(&nl->socket, true);
@@ -602,10 +603,7 @@ _netlink_job_finished(struct os_system_netlink *nl) {
 
 /**
  * Handler for incoming netlink messages
- * @param fd
- * @param data
- * @param event_read
- * @param event_write
+ * @param entry OONF socket entry creating the callback
  */
 static void
 _netlink_handler(struct oonf_socket_entry *entry) {

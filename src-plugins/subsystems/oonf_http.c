@@ -447,7 +447,7 @@ _cb_receive_data(struct oonf_stream_session *session) {
 
 /**
  * Close file transfer descriptor during cleanup
- * @param session
+ * @param session stream session to be cleaned up
  */
 static void
 _cb_cleanup_session(struct oonf_stream_session *session) {

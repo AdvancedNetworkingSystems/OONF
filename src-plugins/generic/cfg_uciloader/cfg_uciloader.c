@@ -50,14 +50,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <uci.h>
+#undef container_of
+
+#include "common/common_types.h"
 #include "common/autobuf.h"
 #include "config/cfg_io.h"
 #include "config/cfg.h"
 #include "core/oonf_subsystem.h"
 
 #include "core/oonf_cfg.h"
-
-#include <uci.h>
 
 #include "cfg_uciloader/cfg_uciloader.h"
 

@@ -59,6 +59,9 @@
  * registered socket handler
  */
 struct oonf_socket_entry {
+  /*! name of socket handler */
+  const char *name;
+
   /*! file descriptor of the socket */
   struct os_fd fd;
 
@@ -67,6 +70,18 @@ struct oonf_socket_entry {
    * @param fd file descriptor of socket
    */
   void (*process) (struct oonf_socket_entry *entry);
+
+  /*! usage counter, will be increased every times the socket receives data */
+  uint32_t _stat_recv;
+
+  /*! usage counter, will be increased every times the socket sends data */
+  uint32_t _stat_send;
+
+  /*!
+   * usage counter, will be increased every times a socket processing takes
+   * more than a TIMER slice
+   */
+  uint32_t _stat_long;
 
   /*! list of socket handlers */
   struct list_entity _node;
@@ -78,13 +93,61 @@ EXPORT void oonf_socket_set_read(
     struct oonf_socket_entry *entry, bool event_read);
 EXPORT void oonf_socket_set_write(
     struct oonf_socket_entry *entry, bool event_write);
+EXPORT struct list_entity *oonf_socket_get_list(void);
 
+/**
+ * @param entry socket entry
+ * @return true if socket has a read event, false otherwise
+ */
 static INLINE bool
 oonf_socket_is_read(struct oonf_socket_entry *entry) {
   return os_fd_event_is_read(&entry->fd);
 }
+
+/**
+ * @param entry socket entry
+ * @return true if socket has a write event, false otherwise
+ */
 static INLINE bool
 oonf_socket_is_write(struct oonf_socket_entry *entry) {
   return os_fd_event_is_write(&entry->fd);
 }
+
+/**
+ * Registers a direct send (without select) to a socket
+ * @param entry socket entry
+ */
+static INLINE void
+oonf_socket_register_direct_send(struct oonf_socket_entry *entry) {
+  entry->_stat_send++;
+}
+
+/**
+ * @param sock pointer to socket entry
+ * @return number of recv events of socket
+ */
+static INLINE uint32_t
+oonf_socket_get_recv(struct oonf_socket_entry *sock) {
+  return sock->_stat_recv;
+}
+
+/**
+ * @param sock pointer to socket entry
+ * @return number of send events of socket
+ */
+static INLINE uint32_t
+oonf_socket_get_send(struct oonf_socket_entry *sock) {
+  return sock->_stat_send;
+}
+
+/**
+ * @param sock pointer to socket entry
+ * @return number of times socket handling took more than a timer slice
+ */
+static INLINE uint32_t
+oonf_socket_get_long(struct oonf_socket_entry *sock) {
+  return sock->_stat_long;
+}
+
+
 #endif /* OONF_SOCKET_H_ */

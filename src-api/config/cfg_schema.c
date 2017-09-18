@@ -69,11 +69,10 @@ static bool _validate_cfg_entry(
     struct cfg_named_section *named, struct cfg_entry *entry,
     const char *section_name, bool cleanup, struct autobuf *out);
 static bool _section_needs_default_named_one(struct cfg_section_type *type);
-static void _handle_named_section_change(struct cfg_schema_section *s_section,
-    struct cfg_db *pre_change, struct cfg_db *post_change,
-    const char *name, bool startup,
-    struct cfg_named_section *pre_defnamed,
-    struct cfg_named_section *post_defnamed);
+static void _handle_named_section_change (struct cfg_schema_section* s_section, 
+    struct cfg_db* pre_change, struct cfg_db* post_change, const char* section_name, 
+    bool startup, struct cfg_named_section* pre_defnamed, 
+    struct cfg_named_section* post_defnamed);
 static int _handle_db_changes(struct cfg_db *pre_change,
     struct cfg_db *post_change, bool startup);
 
@@ -1051,7 +1050,6 @@ _handle_db_changes(struct cfg_db *pre_change, struct cfg_db *post_change, bool s
 
 /**
  * Validates on configuration entry.
- * @param schema_section pointer to schema section
  * @param db pointer to database
  * @param section pointer to database section type
  * @param named pointer to named section
@@ -1120,12 +1118,15 @@ _validate_cfg_entry(struct cfg_db *db, struct cfg_section_type *section,
  * @param s_section schema entry for section
  * @param pre_change pointer to database before changes
  * @param post_change pointer to database after changes
- * @param name
+ * @param section_name name of section, might be NULL for unnamed one
+ * @param startup true comparison against empty database at startup
+ * @param pre_defnamed named section with default name before change
+ * @param post_defnamed named section with default name after change
  */
 static void
 _handle_named_section_change(struct cfg_schema_section *s_section,
     struct cfg_db *pre_change, struct cfg_db *post_change,
-    const char *name, bool startup,
+    const char *section_name, bool startup,
     struct cfg_named_section *pre_defnamed,
     struct cfg_named_section *post_defnamed) {
   struct cfg_schema_entry *entry;
@@ -1135,7 +1136,7 @@ _handle_named_section_change(struct cfg_schema_section *s_section,
   if ((s_section->mode == CFG_SSMODE_NAMED
        || s_section->mode == CFG_SSMODE_NAMED_MANDATORY
        || s_section->mode == CFG_SSMODE_NAMED_WITH_DEFAULT)
-      && name == NULL) {
+      && section_name == NULL) {
     /*
      * ignore unnamed data entry for named sections, they are only
      * used for delivering defaults
@@ -1143,11 +1144,11 @@ _handle_named_section_change(struct cfg_schema_section *s_section,
     return;
   }
 
-  s_section->pre = cfg_db_find_namedsection(pre_change, s_section->type, name);
-  s_section->post = cfg_db_find_namedsection(post_change, s_section->type, name);
+  s_section->pre = cfg_db_find_namedsection(pre_change, s_section->type, section_name );
+  s_section->post = cfg_db_find_namedsection(post_change, s_section->type, section_name );
 
   if (s_section->mode == CFG_SSMODE_NAMED_WITH_DEFAULT
-      && strcasecmp(s_section->def_name, name) == 0) {
+      && strcasecmp(s_section->def_name, section_name ) == 0) {
     /* use the default named sections if necessary */
     if (s_section->pre == NULL && !startup) {
       s_section->pre = pre_defnamed;
@@ -1172,16 +1173,16 @@ _handle_named_section_change(struct cfg_schema_section *s_section,
 
     /* read values */
     entry->pre = cfg_db_get_entry_value(
-        pre_change, s_section->type, name, entry->key.entry);
+        pre_change, s_section->type, section_name, entry->key.entry);
     entry->post = cfg_db_get_entry_value(
-        post_change, s_section->type, name, entry->key.entry);
+        post_change, s_section->type, section_name, entry->key.entry);
 
     entry->delta_changed = strarray_cmp_c(entry->pre, entry->post);
     changed |= entry->delta_changed;
   }
 
   if (changed || startup) {
-    s_section->section_name = name;
+    s_section->section_name = section_name;
     s_section->cb_delta_handler();
   }
 }

@@ -276,8 +276,6 @@ rfc5444_writer_add_address(struct rfc5444_writer *writer __attribute__ ((unused)
  * This function must NOT be called from the rfc5444 writer callbacks.
  *
  * @param writer pointer to writer context
- * @param msgtype messagetype for this tlv, -1 to registere a generic
- *   (not message specific) address TLV type
  * @param type pointer to tlvtype structure, type and exttype must be already initialized
  * @param msgtype message type this TLV belongs too, -1 for address TLV
  * @return 0 if addresstlvtype was registered, -1 otherwise
@@ -479,9 +477,9 @@ rfc5444_writer_unregister_postprocessor(struct rfc5444_writer *writer,
 }
 
 /**
- * Registers a new post-processor
+ * Registers a new forward handler
  * @param writer rfc5444 writer
- * @param processor rfc5444 post-processor
+ * @param forward rfc5444 forward handler
  */
 void
 rfc5444_writer_register_forward_handler(struct rfc5444_writer *writer,
@@ -491,9 +489,9 @@ rfc5444_writer_register_forward_handler(struct rfc5444_writer *writer,
 }
 
 /**
- * Unregisters a post-processor
+ * Unregisters a forward handler
  * @param writer rfc5444 writer
- * @param processor rfc5444 post-processor
+ * @param forward rfc5444 forward handler
  */
 void
 rfc5444_writer_unregister_forward_handler(struct rfc5444_writer *writer,
@@ -637,6 +635,8 @@ _register_addrtlvtype(struct rfc5444_writer *writer,
   tlvtype->_creator = msg;
   tlvtype->_full_type = _get_fulltype(tlvtype->type, tlvtype->exttype);
 
+  assert(!list_is_node_added(&tlvtype->_tlvtype_node));
+
   if (msg) {
     /* add to message creator list */
     list_add_tail(&msg->_msgspecific_tlvtype_head, &tlvtype->_tlvtype_node);
@@ -697,7 +697,7 @@ _rfc5444_writer_free_addresses(struct rfc5444_writer *writer, struct rfc5444_wri
 /**
  * Free message object if not in use anymore
  * @param writer pointer to writer context
- * @param _msg pointer to message object
+ * @param msg pointer to message object
  */
 static void
 _lazy_free_message(struct rfc5444_writer *writer, struct rfc5444_writer_message *msg) {

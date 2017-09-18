@@ -457,8 +457,8 @@ _cb_olsrv2info_help(struct oonf_telnet_data *con) {
 }
 
 /**
- * Initialize the value buffers for a NHDP interface address
- * @param if_addr interface NHDP address
+ * Initialize the value buffers for an originator entry
+ * @param af_type address family of originator
  */
 static void
 _initialize_originator_values(int af_type) {
@@ -467,8 +467,8 @@ _initialize_originator_values(int af_type) {
 }
 
 /**
- * Initialize the value buffers for a NHDP interface address
- * @param if_addr interface NHDP address
+ * Initialize the value buffer for old originator entries
+ * @param entry originator set entry
  */
 static void
 _initialize_old_originator_values(struct olsrv2_originator_set_entry *entry) {

@@ -138,27 +138,28 @@ _cleanup(void) {
 
 /**
  * Updates the current routing MPR selection in the NHDP database
- * @param current_mpr_data
+ * @param graph MPR neighbor graph instance
  */
 static void
-_update_nhdp_routing(struct neighbor_graph *graph) {
-  struct nhdp_link *lnk;
+_update_nhdp_routing(struct nhdp_domain *domain, struct neighbor_graph *graph) {
   struct n1_node *current_mpr_node;
+  struct nhdp_link *lnk;
+  struct nhdp_neighbor_domaindata *neighbordata;
   
   list_for_each_element(nhdp_db_get_link_list(), lnk, _global_node) {
-    lnk->neigh->_domaindata[0].neigh_is_mpr = false;
+    neighbordata = nhdp_domain_get_neighbordata(domain, lnk->neigh);
+    neighbordata->neigh_is_mpr = false;
     current_mpr_node = avl_find_element(&graph->set_mpr,
         &lnk->neigh->originator,
         current_mpr_node, _avl_node);
-    if (current_mpr_node != NULL) {
-      lnk->neigh->_domaindata[0].neigh_is_mpr = true;
-    }
+
+    neighbordata->neigh_is_mpr = current_mpr_node != NULL;
   }
 }
 
 /**
  * Updates the current flooding MPR selection in the NHDP database
- * @param current_mpr_data
+ * @param graph MPR neighbor graph instance
  */
 static void
 _update_nhdp_flooding(struct neighbor_graph *graph) {
@@ -169,15 +170,13 @@ _update_nhdp_flooding(struct neighbor_graph *graph) {
     current_mpr_node = avl_find_element(&graph->set_mpr,
         &current_link->neigh->originator,
         current_mpr_node, _avl_node);
-    if (current_mpr_node != NULL) {
-      current_link->neigh_is_flooding_mpr = true;
-    }
+
+    current_link->neigh_is_flooding_mpr = current_mpr_node != NULL;
   }
 }
 
 /**
  * Updates the current flooding MPR selection in the NHDP database
- * @param current_mpr_data
  */
 static void
 _clear_nhdp_flooding(void) {
@@ -190,6 +189,9 @@ _clear_nhdp_flooding(void) {
   }
 }
 
+/**
+ * Update the flooding MPR settings 
+ */
 static void
 _cb_update_flooding_mpr(struct nhdp_domain *domain) {
   struct mpr_flooding_data flooding_data;
@@ -203,7 +205,7 @@ _cb_update_flooding_mpr(struct nhdp_domain *domain) {
     
     mpr_calculate_neighbor_graph_flooding(domain, &flooding_data);
     mpr_calculate_mpr_rfc7181(domain, &flooding_data.neigh_graph);
-    mpr_print_sets(&flooding_data.neigh_graph);
+    mpr_print_sets(domain, &flooding_data.neigh_graph);
 #ifndef NDEBUG
     _validate_mpr_set(domain, &flooding_data.neigh_graph);
 #endif
@@ -213,6 +215,9 @@ _cb_update_flooding_mpr(struct nhdp_domain *domain) {
 
 }
 
+/**
+ * Update the routing MPR settings for all domains
+ */
 static void
 _cb_update_routing_mpr(struct nhdp_domain *domain) {
   struct neighbor_graph routing_graph;
@@ -226,11 +231,11 @@ _cb_update_routing_mpr(struct nhdp_domain *domain) {
   memset(&routing_graph, 0, sizeof(routing_graph));
   mpr_calculate_neighbor_graph_routing(domain, &routing_graph);
   mpr_calculate_mpr_rfc7181(domain, &routing_graph);
-  mpr_print_sets(&routing_graph);
+  mpr_print_sets(domain, &routing_graph);
 #ifndef NDEBUG
   _validate_mpr_set(domain, &routing_graph);
 #endif
-  _update_nhdp_routing(&routing_graph);
+  _update_nhdp_routing(domain, &routing_graph);
   mpr_clear_neighbor_graph(&routing_graph);
 }
 
@@ -238,8 +243,8 @@ _cb_update_routing_mpr(struct nhdp_domain *domain) {
 
 /**
  * Validate the MPR set according to section 18.3 (draft 19)
- * @param current_mpr_data
- * @return 
+ * @param domain NHDP domaine
+ * @param graph MPR neighbor graph instance
  */
 static void
 _validate_mpr_set(const struct nhdp_domain *domain, struct neighbor_graph *graph)

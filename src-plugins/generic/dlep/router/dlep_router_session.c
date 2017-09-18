@@ -241,8 +241,8 @@ _cb_tcp_lost(struct oonf_stream_session *tcp_session) {
 
 /**
  * Receive tcp data via oonf_stream_socket
- * @param tcp_session
- * @return
+ * @param tcp_session tcp session to DLEP partner
+ * @return new state of TCP session
  */
 static enum oonf_stream_session_state
 _cb_tcp_receive_data(struct oonf_stream_session *tcp_session) {
@@ -279,7 +279,7 @@ _cb_send_buffer(struct dlep_session *session,
 
 /**
  * Callback triggered when session is terminated
- * @param session
+ * @param session dlep session
  */
 static void
 _cb_end_session(struct dlep_session *session) {

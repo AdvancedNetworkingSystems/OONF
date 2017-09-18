@@ -54,6 +54,8 @@
 #include "core/oonf_logging.h"
 #include "core/oonf_subsystem.h"
 #include "subsystems/oonf_class.h"
+#include "subsystems/oonf_clock.h"
+#include "subsystems/oonf_timer.h"
 
 #include "olsrv2/olsrv2.h"
 #include "olsrv2/olsrv2_lan.h"
@@ -92,7 +94,28 @@ struct _import_entry {
   /*! filter by routing metric, 0 to ignore */
   int32_t distance;
 
+  /*! set the routing metric to a specific value */
+  int32_t routing_metric;
+
+  /*! double the metric every time interval, 0 to disable */
+  uint64_t metric_aging;
+
+  /*! list of lan entries imported by this filter */
+  struct avl_tree imported_lan_tree;
+
   /*! tree of all configured lan import */
+  struct avl_node _node;
+};
+
+struct _imported_lan {
+  struct os_route_key key;
+
+  struct _import_entry *import;
+
+  /*! timer to age metric value */
+  struct oonf_timer_instance _aging_timer;
+
+  /*! node for list of imported lan entries */
   struct avl_node _node;
 };
 
@@ -103,11 +126,19 @@ static void _cleanup(void);
 static struct _import_entry *_get_import(const char *name);
 static void _destroy_import(struct _import_entry *);
 
+static struct _imported_lan *_add_lan(struct _import_entry *,
+		struct os_route_key *key,
+		uint32_t metric, uint8_t distance);
+static void _destroy_lan(struct _imported_lan *);
+
 static void _cb_query(struct os_route *filter, struct os_route *route);
 static void _cb_query_finished(struct os_route *, int error);
 
 static bool _is_allowed_to_import(const struct os_route *route);
 static void _cb_rt_event(const struct os_route *, bool);
+
+static void _cb_metric_aging(struct oonf_timer_instance *entry);
+
 static void _cb_cfg_changed(void);
 
 /* plugin declaration */
@@ -128,6 +159,11 @@ static struct cfg_schema_entry _import_entries[] = {
       "Routing protocol of matching routes, 0 for all protocols", 0, false, -1, 255),
   CFG_MAP_INT32_MINMAX(_import_entry, distance, "metric", "-1",
       "Metric of matching routes, 0 for all metrics", 0, false, -1, INT32_MAX),
+  CFG_MAP_INT32_MINMAX(_import_entry, routing_metric, "routing_metric", "1",
+      "Set the routing metric of an imported route to a specific value",
+	  false, false, RFC7181_METRIC_MIN, RFC7181_METRIC_MAX),
+  CFG_MAP_CLOCK(_import_entry, metric_aging, "metric_aging", "0",
+      "Double the routing metric value every time interval, 0 to disable"),
 };
 
 static struct cfg_schema_section _import_section = {
@@ -147,6 +183,8 @@ static struct cfg_schema_section _import_section = {
 
 static const char *_dependencies[] = {
   OONF_CLASS_SUBSYSTEM,
+  OONF_CLOCK_SUBSYSTEM,
+  OONF_TIMER_SUBSYSTEM,
   OONF_OLSRV2_SUBSYSTEM,
   OONF_OS_ROUTING_SUBSYSTEM,
 };
@@ -166,8 +204,14 @@ DECLARE_OONF_PLUGIN(_import_subsystem);
 
 /* class definition for filters */
 static struct oonf_class _import_class = {
-  .name = "lan import",
+  .name = "lan import filter",
   .size = sizeof(struct _import_entry),
+};
+
+/* class definition for imported lans */
+static struct oonf_class _lan_import_class = {
+  .name = "lan import entry",
+  .size = sizeof(struct _imported_lan),
 };
 
 /* callback filter for dijkstra */
@@ -177,6 +221,12 @@ static struct os_route_listener _routing_listener = {
 
 /* tree of lan importers */
 static struct avl_tree _import_tree;
+
+static struct oonf_timer_class _aging_timer_class = {
+  .name = "lan import metric aging",
+  .callback = _cb_metric_aging,
+  .periodic = true,
+};
 
 /* wildcard route for first query */
 static struct os_route _unicast_query;
@@ -189,7 +239,9 @@ static int
 _init(void) {
   avl_init(&_import_tree, avl_comp_strcasecmp, false);
   oonf_class_add(&_import_class);
+  oonf_class_add(&_lan_import_class);
   os_routing_listener_add(&_routing_listener);
+  oonf_timer_add(&_aging_timer_class);
 
   /* send wildcard query */
   os_routing_init_wildcard_route(&_unicast_query);
@@ -210,7 +262,9 @@ _cleanup(void) {
     _destroy_import(import);
   }
 
+  oonf_timer_remove(&_aging_timer_class);
   os_routing_listener_remove(&_routing_listener);
+  oonf_class_remove(&_lan_import_class);
   oonf_class_remove(&_import_class);
 }
 
@@ -226,8 +280,8 @@ _cb_query(struct os_route *filter __attribute__((unused)), struct os_route *rout
 
 /**
  * Dummy cb_finished callback for wildcard query
- * @param route
- * @param error
+ * @param route route that was finished
+ * @param error error code
  */
 static void
 _cb_query_finished(struct os_route *route __attribute__((unused)),
@@ -271,7 +325,7 @@ _is_allowed_to_import(const struct os_route *route) {
 static void
 _cb_rt_event(const struct os_route *route, bool set) {
   struct _import_entry *import;
-  struct nhdp_domain *domain;
+  struct _imported_lan *lan;
   char ifname[IF_NAMESIZE];
   struct os_route_key ssprefix;
   int metric;
@@ -357,30 +411,16 @@ _cb_rt_event(const struct os_route *route, bool set) {
       }
 
       OONF_DEBUG(LOG_LAN_IMPORT, "Add lan...");
-      if (import->domain != -1) {
-        domain = nhdp_domain_get_by_ext(import->domain);
-        if (domain) {
-          olsrv2_lan_add(domain, &ssprefix, 1, (uint8_t)metric);
-        }
-      }
-      else {
-        list_for_each_element(nhdp_domain_get_list(), domain, _node) {
-          olsrv2_lan_add(domain, &ssprefix, 1, (uint8_t)metric);
-        }
+      lan = _add_lan(import, &ssprefix, import->routing_metric, metric);
+      if (lan && import->metric_aging) {
+        oonf_timer_set(&lan->_aging_timer, import->metric_aging);
       }
     }
     else {
       OONF_DEBUG(LOG_LAN_IMPORT, "Remove lan...");
-      if (import->domain != -1) {
-        domain = nhdp_domain_get_by_ext(import->domain);
-        if (domain) {
-          olsrv2_lan_remove(domain, &ssprefix);
-        }
-      }
-      else {
-        list_for_each_element(nhdp_domain_get_list(), domain, _node) {
-          olsrv2_lan_remove(domain, &ssprefix);
-        }
+      lan = avl_find_element(&import->imported_lan_tree, &ssprefix, lan, _node);
+      if (lan) {
+        _destroy_lan(lan);
       }
     }
   }
@@ -410,6 +450,8 @@ _get_import(const char *name) {
   import->_node.key = import->name;
   avl_insert(&_import_tree, &import->_node);
 
+  avl_init(&import->imported_lan_tree, os_routing_avl_cmp_route_key, false);
+
   return import;
 }
 
@@ -422,6 +464,78 @@ _destroy_import(struct _import_entry *import) {
   avl_remove(&_import_tree, &import->_node);
   netaddr_acl_remove(&import->filter);
   oonf_class_free(&_import_class, import);
+}
+
+static struct _imported_lan *
+_add_lan(struct _import_entry *import,
+		struct os_route_key *key,
+		uint32_t metric, uint8_t distance) {
+  struct nhdp_domain *domain;
+  struct _imported_lan *lan;
+
+  lan = avl_find_element(&import->imported_lan_tree, key, lan, _node);
+  if (lan) {
+	return lan;
+  }
+
+  lan = oonf_class_malloc(&_lan_import_class);
+  if (!lan) {
+    return NULL;
+  }
+
+  memcpy(&lan->key, key, sizeof(*key));
+  lan->_node.key = &lan->key;
+  avl_insert(&import->imported_lan_tree, &lan->_node);
+
+  lan->import = import;
+  lan->_aging_timer.class = &_aging_timer_class;
+
+  list_for_each_element(nhdp_domain_get_list(), domain, _node) {
+	if (import->domain == -1 || import->domain == domain->ext) {
+      olsrv2_lan_add(domain, key, metric, distance);
+	}
+  }
+
+  return lan;
+}
+
+static void
+_destroy_lan(struct _imported_lan *lan) {
+  struct nhdp_domain *domain;
+
+  list_for_each_element(nhdp_domain_get_list(), domain, _node) {
+	if (lan->import->domain == -1 || lan->import->domain == domain->ext) {
+      olsrv2_lan_remove(domain, &lan->key);
+	}
+  }
+
+  avl_remove(&lan->import->imported_lan_tree, &lan->_node);
+  oonf_class_free(&_lan_import_class, lan);
+}
+
+static void
+_cb_metric_aging(struct oonf_timer_instance *entry) {
+  struct olsrv2_lan_entry *lan_entry;
+  struct nhdp_domain *domain;
+  struct olsrv2_lan_domaindata *landata;
+  struct _imported_lan *lan;
+
+  lan = container_of(entry, struct _imported_lan, _aging_timer);
+  lan_entry = olsrv2_lan_get(&lan->key);
+  if (lan_entry) {
+	list_for_each_element(nhdp_domain_get_list(), domain, _node) {
+	  if (lan->import->domain == -1 || lan->import->domain == domain->ext) {
+		landata = olsrv2_lan_get_domaindata(domain, lan_entry);
+		if (landata->outgoing_metric >= RFC7181_METRIC_MAX/2) {
+	      landata->outgoing_metric = RFC7181_METRIC_MAX;
+	      oonf_timer_stop(entry);
+		}
+		else {
+	      landata->outgoing_metric *= 2;
+		}
+	  }
+	}
+  }
 }
 
 /**

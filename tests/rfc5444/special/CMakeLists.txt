@@ -20,6 +20,7 @@ endfunction(compile_rfc5444_test)
 
 set(TESTS test_nhdp_1
           test_nhdp_2
+          test_nhdp_3
           test_olsrv2_1
 )
 

@@ -129,6 +129,7 @@ void
 oonf_timer_add(struct oonf_timer_class *ti) {
   assert (ti->callback);
   assert (ti->name);
+  assert (ti->name[0]);
   list_add_tail(&_timer_info_list, &ti->_node);
 }
 
@@ -173,12 +174,12 @@ oonf_timer_start_ext(struct oonf_timer_instance *timer, uint64_t first, uint64_t
 
   if (timer->_clock) {
     avl_remove(&_timer_tree, &timer->_node);
+    timer->class->_stat_changes++;
   }
   else {
     timer->_node.key = timer;
-    timer->class->usage++;
+    timer->class->_stat_usage++;
   }
-  timer->class->changes++;
 
   /*
    * Compute random numbers only once.
@@ -221,8 +222,7 @@ oonf_timer_stop(struct oonf_timer_instance *timer)
   avl_remove(&_timer_tree, &timer->_node);
   timer->_clock = 0;
   timer->_random = 0;
-  timer->class->usage--;
-  timer->class->changes++;
+  timer->class->_stat_usage--;
 
   if (timer->class->_timer_in_callback == timer) {
     timer->class->_timer_stopped = true;
@@ -282,7 +282,7 @@ oonf_timer_walk(void)
     info->_timer_stopped = false;
 
     /* update statistics */
-    info->changes++;
+    info->_stat_fired++;
 
     if (timer->_period == 0) {
       /* stop now, the data structure might not be available anymore later */
@@ -297,6 +297,7 @@ oonf_timer_walk(void)
     if (end_time - start_time > OONF_TIMER_SLICE) {
       OONF_WARN(LOG_TIMER, "Timer %s scheduling took %"PRIu64" ms",
           timer->class->name, end_time - start_time);
+      info->_stat_long++;
     }
 
     /*
@@ -344,11 +345,9 @@ oonf_timer_get_list(void) {
 }
 
 /**
- * Decrement a relative timer by a random number range.
- * @param the relative timer expressed in units of milliseconds.
- * @param the jitter in percent
- * @param random_val cached random variable to calculate jitter
- * @return the absolute time when timer will fire
+ * calculate the absolute time when a timer should fire, incuding jitter
+ * @param timer timer instance that will be initialized
+ * @param rel_time relative time until timer should fire
  */
 static void
 _calc_clock(struct oonf_timer_instance *timer, uint64_t rel_time)
@@ -378,9 +377,9 @@ _calc_clock(struct oonf_timer_instance *timer, uint64_t rel_time)
 
 /**
  * Custom AVL comparator for two timer entries.
- * @param p1
- * @param p2
- * @return
+ * @param p1 first timer entry
+ * @param p2 second timer entry
+ * @return -1/0/1 depending on comparision of time when timer fires
  */
 static int
 _avlcomp_timer(const void *p1, const void *p2) {

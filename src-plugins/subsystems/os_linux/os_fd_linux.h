@@ -274,7 +274,7 @@ os_fd_get_fd(struct os_fd *sock) {
  * Copy a filedescriptor
  * @param dst target filedescriptor
  * @param from source filedescriptor
- * @return
+ * @return -1 if an error happened, 0 otherwise
  */
 static INLINE int
 os_fd_copy(struct os_fd *dst, struct os_fd *from) {
@@ -287,11 +287,11 @@ os_fd_copy(struct os_fd *dst, struct os_fd *from) {
  * @return -1 if an error happened, 0 otherwise
  */
 static INLINE int
-os_fd_close(struct os_fd *sock) {
+os_fd_close(struct os_fd *fd ) {
   int result = 0;
-  if (sock->fd != -1) {
-    result = close(sock->fd);
-    sock->fd = -1;
+  if ( fd->fd != -1) {
+    result = close( fd->fd);
+        fd->fd = -1;
   }
   return result;
 }
@@ -303,8 +303,8 @@ os_fd_close(struct os_fd *sock) {
  * @return -1 if an error happened, 0 otherwise
  */
 static INLINE int
-os_fd_listen(struct os_fd *sock, int n) {
-  return listen(sock->fd, n);
+os_fd_listen(struct os_fd *fd, int n) {
+  return listen(fd->fd, n);
 }
 
 /**
@@ -456,13 +456,14 @@ os_fd_event_remove(struct os_fd_select *sel) {
  * @return -1 if an error happened, 0 otherwise
  */
 static INLINE int
-os_fd_connect(struct os_fd *sock, const union netaddr_socket *remote) {
-  return connect(sock->fd, &remote->std, sizeof(*remote));
+os_fd_connect(struct os_fd *sockfd, const union netaddr_socket *remote) {
+  return connect(sockfd->fd, &remote->std, sizeof(*remote));
 }
 
 /**
  * Call posix accept()
- * @param sockfd server socket to accept a connection from
+ * @param client storage for filedescriptor for incoming session
+ * @param server server socket to accept a connection from
  * @param incoming buffer for storing the incoming source IP/port
  * @return result of accept() call
  */
@@ -480,19 +481,19 @@ os_fd_accept(struct os_fd *client,
 
 /**
  * Get socket error state
- * @param fd file descriptor of socket
+ * @param sockfd file descriptor of socket
  * @param value buffer to store error state
  * @return result of getsockopt() call
  */
 static INLINE int
-os_fd_get_socket_error(struct os_fd *sock, int *value) {
+os_fd_get_socket_error(struct os_fd *sockfd, int *value) {
   socklen_t len = sizeof(*value);
-  return getsockopt(sock->fd, SOL_SOCKET, SO_ERROR, value, &len);
+  return getsockopt(sockfd->fd, SOL_SOCKET, SO_ERROR, value, &len);
 }
 
 /**
  * Sends data to an UDP socket.
- * @param fd filedescriptor
+ * @param sockfd filedescriptor of UDP socket
  * @param buf buffer for target data
  * @param length length of buffer
  * @param dst pointer to netaddr socket to send packet to
@@ -500,15 +501,15 @@ os_fd_get_socket_error(struct os_fd *sock, int *value) {
  * @return same as sendto()
  */
 static INLINE ssize_t
-os_fd_sendto(struct os_fd *sock, const void *buf, size_t length, const union netaddr_socket *dst, bool dont_route) {
-  return sendto(sock->fd, buf, length,
+os_fd_sendto(struct os_fd *sockfd, const void *buf, size_t length, const union netaddr_socket *dst, bool dont_route) {
+  return sendto(sockfd->fd, buf, length,
       dont_route ? MSG_DONTROUTE : 0,
       dst ? &dst->std : NULL, sizeof(*dst));
 }
 
 /**
- * Receive data from a socket.
- * @param fd filedescriptor
+ * Receive data from an UDP socket.
+ * @param sockfd filedescriptor of UDP socket
  * @param buf buffer for incoming data
  * @param length length of buffer
  * @param source pointer to netaddr socket object to store source of packet
@@ -517,21 +518,21 @@ os_fd_sendto(struct os_fd *sock, const void *buf, size_t length, const union net
  * @return same as recvfrom()
  */
 static INLINE ssize_t
-os_fd_recvfrom(struct os_fd *sock, void *buf, size_t length, union netaddr_socket *source,
+os_fd_recvfrom(struct os_fd *sockfd, void *buf, size_t length, union netaddr_socket *source,
     const struct os_interface *interf __attribute__((unused))) {
   socklen_t len = sizeof(*source);
-  return recvfrom(sock->fd, buf, length, 0, &source->std, &len);
+  return recvfrom(sockfd->fd, buf, length, 0, &source->std, &len);
 }
 
 /**
  * Binds a socket to a certain interface
  * @param sock filedescriptor of socket
- * @param interf name of interface
+ * @param interf interface to bind the socket to
  * @return -1 if an error happened, 0 otherwise
  */
 static INLINE int
-os_fd_bindto_interface(struct os_fd *sock, struct os_interface *data) {
-  return setsockopt(sock->fd, SOL_SOCKET, SO_BINDTODEVICE, data->name, strlen(data->name) + 1);
+os_fd_bindto_interface(struct os_fd *sock, struct os_interface *interf) {
+  return setsockopt(sock->fd, SOL_SOCKET, SO_BINDTODEVICE, interf->name, strlen(interf->name) + 1);
 }
 
 /**
@@ -545,10 +546,10 @@ os_fd_get_loopback_name(void) {
 /**
  * send data from one filedescriptor to another one. Linux compatible API
  * structure, might need a bit of work for other OS.
- * @param outfd
- * @param infd
- * @param offset
- * @param count
+ * @param out destination file descriptor
+ * @param in source file descriptor
+ * @param offset offset where to start reading from source
+ * @param count number of bytes to copy
  * @return -1 if an error happened, otherwise the number of bytes that
  *   were sent to outfd
  */

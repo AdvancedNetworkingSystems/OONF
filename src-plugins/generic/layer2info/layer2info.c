@@ -396,7 +396,6 @@ _initialize_if_values(struct oonf_layer2_net *net) {
 /**
  * Initialize the value buffers for an array of layer2 data objects
  * @param template viewer template
- * @param dst array of destination buffers
  * @param data array of data objects
  */
 static void
@@ -454,10 +453,7 @@ _initialize_neigh_values(struct oonf_layer2_neigh *neigh) {
 /**
  * Initialize the value buffers for an array of layer2 data objects
  * @param template viewer template
- * @param dst array of destination buffers
  * @param data array of data objects
- * @param meta array of metadata description of objects
- * @param count number of objects in each array
  */
 static void
 _initialize_neigh_data_values(struct oonf_viewer_template *template,

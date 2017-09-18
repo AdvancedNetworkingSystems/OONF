@@ -487,7 +487,7 @@ _print_edge_links(struct json_session *session,
 
   af_type = netaddr_get_address_family(&neigh->originator);
 
-  best_link = nhdp_domain_get_neighbordata(domain, neigh)->best_link;
+  best_link = nhdp_domain_get_neighbordata(domain, neigh)->best_out_link;
 
   json_start_array(session, "links");
 
@@ -902,7 +902,8 @@ _print_routing_tree(struct json_session *session,
 
 /**
  * Print all JSON routes
- * @param session
+ * @param session json session
+ * @param filter filter value to select domain
  */
 static void
 _create_route_json(struct json_session *session, const char *filter) {

@@ -384,6 +384,8 @@ EXPORT size_t oonf_log_get_max_severitytextlen(void);
 EXPORT size_t oonf_log_get_max_sourcetextlen(void);
 EXPORT size_t oonf_log_get_sourcecount(void);
 
+EXPORT uint32_t oonf_log_get_warning_count(enum oonf_log_source source);
+
 EXPORT void oonf_log_addhandler(struct oonf_log_handler_entry *);
 EXPORT void oonf_log_removehandler(struct oonf_log_handler_entry *);
 EXPORT int oonf_log_register_source(const char *name);

@@ -234,6 +234,15 @@ olsrv2_routing_get_ansn(void) {
 }
 
 /**
+ * Force the answer set number to increase
+ * @param increment amount of increase
+ */
+void
+olsrv2_routing_force_ansn_increment(uint16_t increment) {
+  _ansn += increment;
+}
+
+/**
  * Trigger a new dijkstra as soon as we are back in the mainloop
  * (unless the rate limitation timer is active, then we will wait for it)
  */
@@ -273,6 +282,24 @@ olsrv2_routing_freeze_routes(bool freeze) {
 const struct olsrv2_routing_domain *
 olsrv2_routing_get_parameters(struct nhdp_domain *domain) {
   return &_domain_parameter[domain->index];
+}
+
+/**
+ * Mark a domain as changed to trigger a dijkstra run
+ * @param domain NHDP domain, NULL for all domains
+ */
+void
+olsrv2_routing_domain_changed(struct nhdp_domain *domain) {
+  if (domain) {
+    _domain_changed[domain->index] = true;
+
+    olsrv2_routing_trigger_update();
+    return;
+  }
+
+  list_for_each_element(nhdp_domain_get_list(), domain, _node) {
+    olsrv2_routing_domain_changed(domain);
+  }
 }
 
 /**
@@ -437,6 +464,16 @@ olsrv2_routing_get_filter_list(void) {
  */
 static void
 _cb_mpr_update(struct nhdp_domain *domain) {
+  if (!domain) {
+    list_for_each_element(nhdp_domain_get_list(), domain, _node) {
+      _cb_mpr_update(domain);
+    }
+    return;
+  }
+
+  OONF_INFO(LOG_OLSRV2, "MPR update for domain %u", domain->index);
+
+  _update_ansn = true;
   _domain_changed[domain->index] = true;
   olsrv2_routing_trigger_update();
 }
@@ -447,6 +484,15 @@ _cb_mpr_update(struct nhdp_domain *domain) {
  */
 static void
 _cb_metric_update(struct nhdp_domain *domain) {
+  if (!domain) {
+    list_for_each_element(nhdp_domain_get_list(), domain, _node) {
+      _cb_metric_update(domain);
+    }
+    return;
+  }
+
+  OONF_INFO(LOG_OLSRV2, "Metric update for domain %u", domain->index);
+
   _update_ansn = true;
   _domain_changed[domain->index] = true;
   olsrv2_routing_trigger_update();
@@ -535,16 +581,16 @@ _remove_entry(struct olsrv2_routing_entry *entry) {
  * Insert a new entry into the dijkstra working queue
  * @param target pointer to tc target
  * @param neigh next hop through which the target can be reached
- * @param linkcost cost of the last hop of the path towards the target
- * @param pathcost remainder of the cost to the target
+ * @param link_cost cost of the last hop of the path towards the target
+ * @param path_cost remainder of the cost to the target
  * @param distance hopcount to be used for the route to the target
  * @param single_hop true if this is a single-hop route, false otherwise
- * @param last_node address of the last originator before we reached the
+ * @param last_originator address of the last originator before we reached the
  *   destination prefix
  */
 static void
 _insert_into_working_tree(struct olsrv2_tc_target *target,
-    struct nhdp_neighbor *neigh, uint32_t linkcost,
+    struct nhdp_neighbor *neigh, uint32_t link_cost,
     uint32_t path_cost, uint8_t path_hops,
     uint8_t distance, bool single_hop,
     const struct netaddr *last_originator) {
@@ -552,7 +598,7 @@ _insert_into_working_tree(struct olsrv2_tc_target *target,
 #ifdef OONF_LOG_DEBUG_INFO
   struct netaddr_str nbuf1, nbuf2;
 #endif
-  if (linkcost > RFC7181_METRIC_MAX) {
+  if ( link_cost > RFC7181_METRIC_MAX) {
     return;
   }
 
@@ -567,7 +613,7 @@ _insert_into_working_tree(struct olsrv2_tc_target *target,
   }
 
   /* calculate new total pathcost */
-  path_cost += linkcost;
+  path_cost += link_cost;
   path_hops += 1;
 
   if (avl_is_node_added(&node->_node)) {
@@ -679,7 +725,7 @@ _update_routing_entry(struct nhdp_domain *domain,
       netaddr_to_string(&nbuf1, &rtentry->route.p.key.dst),
       netaddr_to_string(&nbuf2, &rtentry->route.p.key.src),
       netaddr_to_string(&nbuf3, &first_hop->originator),
-      domain->ext, pathcost, neighdata->best_link->local_if->os_if_listener.data->name);
+      domain->ext, pathcost, neighdata->best_out_link->local_if->os_if_listener.data->name);
 
   /* remember originator */
   memcpy(&rtentry->originator, dst_originator, sizeof(struct netaddr));
@@ -695,12 +741,12 @@ _update_routing_entry(struct nhdp_domain *domain,
 
   /* copy gateway if necessary */
   if (single_hop
-      && netaddr_cmp(&neighdata->best_link->if_addr,
+      && netaddr_cmp(&neighdata->best_out_link->if_addr,
           &rtentry->route.p.key.dst) == 0) {
     netaddr_invalidate(&rtentry->route.p.gw);
   }
   else {
-    memcpy(&rtentry->route.p.gw, &neighdata->best_link->if_addr,
+    memcpy(&rtentry->route.p.gw, &neighdata->best_out_link->if_addr,
         sizeof(struct netaddr));
   }
 }
@@ -708,8 +754,6 @@ _update_routing_entry(struct nhdp_domain *domain,
 /**
  * Initialize internal fields for dijkstra calculation
  * @param domain nhdp domain
- * @return true if source-specific and non-source specific can
- *   be handled in the same dijkstra run, false otherwise
  */
 static void
 _prepare_routes(struct nhdp_domain *domain) {
@@ -723,9 +767,6 @@ _prepare_routes(struct nhdp_domain *domain) {
 
 /**
  * Initialize internal fields for dijkstra calculation
- * @param domain nhdp domain
- * @return true if source-specific and non-source specific can
- *   be handled in the same dijkstra run, false otherwise
  */
 static void
 _prepare_nodes(void) {
@@ -843,6 +884,8 @@ _add_one_hop_nodes(struct nhdp_domain *domain, int af_family,
 /**
  * Remove item from dijkstra working queue and process it
  * @param domain nhdp domain
+ * @param use_non_ss include non-source-specific nodes into working list
+ * @param use_ss include source-specific nodes into working list
  */
 static void
 _handle_working_queue(struct nhdp_domain *domain,
@@ -1162,7 +1205,7 @@ _cb_trigger_dijkstra(struct oonf_timer_instance *ptr __attribute__((unused))) {
 
 /**
  * Callback for kernel route processing results
- * @param route pointer to kernel route
+ * @param route OS route data
  * @param error 0 if no error happened
  */
 static void

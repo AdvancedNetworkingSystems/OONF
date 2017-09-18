@@ -89,8 +89,6 @@ EXPORT bool olsrv2_mpr_shall_process(
 EXPORT bool olsrv2_mpr_shall_forwarding(
     struct rfc5444_reader_tlvblock_context *context,
     struct netaddr *source_address, uint64_t vtime);
-EXPORT uint16_t olsrv2_get_ansn(void);
-EXPORT uint16_t olsrv2_update_ansn(bool);
 EXPORT void olsrv2_generate_tcs(bool);
 EXPORT int olsrv2_validate_lan(const struct cfg_schema_entry *entry,
     const char *section_name, const char *value, struct autobuf *out);

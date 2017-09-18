@@ -231,6 +231,20 @@ oonf_class_get_extension(struct oonf_class_extension *ext, void *ptr) {
 }
 
 /**
+ * @param ext extension data structure
+ * @param ptr pointer to extension block
+<<<<<<< HEAD
+ * @return pointer to base memory block
+=======
+ * @return pointer to extensions base block
+>>>>>>> mpr_rework
+ */
+static INLINE void *
+oonf_class_get_base(struct oonf_class_extension *ext, void *ptr) {
+  return ((char *)ptr) - ext->_offset;
+}
+
+/**
  * @param ext pointer to class extension
  * @return true if extension is registered
  */

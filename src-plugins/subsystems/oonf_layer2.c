@@ -208,6 +208,10 @@ struct oonf_layer2_net *
 oonf_layer2_net_add(const char *ifname) {
   struct oonf_layer2_net *l2net;
 
+  if (!ifname) {
+    return NULL;
+  }
+
   l2net = avl_find_element(&_oonf_layer2_net_tree, ifname, l2net, _node);
   if (l2net) {
     return l2net;

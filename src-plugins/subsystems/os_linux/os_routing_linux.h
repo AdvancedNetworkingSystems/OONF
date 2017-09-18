@@ -146,8 +146,8 @@ os_routing_is_in_progress(struct os_route *route) {
  * @param listener routing change listener
  */
 static INLINE void
-os_routing_listener_add(struct os_route_listener *l) {
-  os_routing_linux_listener_add(l);
+os_routing_listener_add(struct os_route_listener *listener) {
+  os_routing_linux_listener_add(listener);
 }
 
 /**
@@ -155,8 +155,8 @@ os_routing_listener_add(struct os_route_listener *l) {
  * @param listener routing change listener
  */
 static INLINE void
-os_routing_listener_remove(struct os_route_listener *l) {
-  os_routing_linux_listener_remove(l);
+os_routing_listener_remove(struct os_route_listener *listener) {
+  os_routing_linux_listener_remove(listener);
 }
 
 /**
@@ -172,7 +172,7 @@ os_routing_init_wildcard_route(struct os_route *route) {
 /**
  * Print OS route to string buffer
  * @param buf pointer to string buffer
- * @param route pointer to route
+ * @param route_param route parameters
  * @return pointer to string buffer, NULL if an error happened
  */
 static INLINE const char *
@@ -184,7 +184,7 @@ os_routing_to_string(
 /**
  * Copy one address to 'specific', fill the other one with the
  * fitting IP_ANY value
- * @param ipany buffer for IP_ANY
+ * @param any buffer for IP_ANY
  * @param specific buffer for source
  * @param source source IP value to copy
  */

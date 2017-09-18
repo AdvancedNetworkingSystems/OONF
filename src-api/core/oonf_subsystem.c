@@ -261,7 +261,6 @@ oonf_subsystem_hook(struct oonf_subsystem *plugin) {
  * prefix and/or postfix
  * @param pluginname buffer for plugin name
  * @param libname library name
- * @return pointer to buffer with plugin name, must be freed later
  */
 void
 oonf_subsystem_extract_name(
@@ -507,7 +506,7 @@ _unload_plugin(struct oonf_subsystem *plugin, bool cleanup) {
   OONF_INFO(LOG_PLUGINS, "Unloading plugin %s\n", plugin->name);
 
   /* remove first from tree */
-  avl_delete(&oonf_plugin_tree, &plugin->_node);
+  avl_remove(&oonf_plugin_tree, &plugin->_node);
 
   /* cleanup */
   if (plugin->_dlhandle) {

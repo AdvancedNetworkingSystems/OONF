@@ -333,11 +333,11 @@ _cb_reconfigure(struct oonf_timer_instance *timer) {
 
 /**
  * Configuration subsystem validator for linkdata
- * @param entry
- * @param section_name
- * @param value
- * @param out
- * @return
+ * @param entry configuration schema entry
+ * @param section_name section name the entry was set
+ * @param value value of the entry
+ * @param out output buffer for error messages
+ * @return -1 if validation failed, 0 otherwise
  */
 static int
 _cb_validate_l2netdata(const struct cfg_schema_entry *entry,
@@ -373,11 +373,11 @@ _cb_validate_l2netdata(const struct cfg_schema_entry *entry,
 
 /**
  * Configuration subsystem validator for linkdata
- * @param entry
- * @param section_name
- * @param value
- * @param out
- * @return
+ * @param entry configuration schema entry
+ * @param section_name section name the entry was set
+ * @param value value of the entry
+ * @param out output buffer for error messages
+ * @return -1 if validation failed, 0 otherwise
  */
 static int
 _cb_validate_l2defdata(const struct cfg_schema_entry *entry,
@@ -413,11 +413,11 @@ _cb_validate_l2defdata(const struct cfg_schema_entry *entry,
 
 /**
  * Configuration subsystem validator for linkdata
- * @param entry
- * @param section_name
- * @param value
- * @param out
- * @return
+ * @param entry configuration schema entry
+ * @param section_name section name the entry was set
+ * @param value value of the entry
+ * @param out output buffer for error messages
+ * @return -1 if validation failed, 0 otherwise
  */
 static int
 _cb_validate_l2neighdata(const struct cfg_schema_entry *entry,

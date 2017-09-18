@@ -145,7 +145,10 @@ static void write_packet(struct rfc5444_writer *w __attribute__ ((unused)),
 
   printf("Packet send with %zu bytes\n", length);
   abuf_hexdump(&dumpbuf, "", buffer, length);
+  rfc5444_print_raw(&dumpbuf, buffer, length);
+#if 0
   rfc5444_print_direct(&dumpbuf, buffer, length);
+#endif
   printf("%s", dumpbuf._buf);
   abuf_clear(&dumpbuf);
  }
@@ -239,10 +242,8 @@ int main(int argc __attribute__ ((unused)), char **argv __attribute__ ((unused))
 
   BEGIN_TESTING(clear_elements);
 
-  if (0) {
-    test_frag_80_1();
-    test_frag_80_2();
-  }
+  test_frag_80_1();
+  test_frag_80_2();
   test_frag_50_3();
 
   rfc5444_writer_cleanup(&writer);

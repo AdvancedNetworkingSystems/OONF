@@ -209,7 +209,7 @@ _remember_removed_originator(struct netaddr *originator, uint64_t vtime) {
  * @param af_type address family type of the originator
  *   (AF_INET or AF_INET6)
  * @param setting pointer to the storage of the originator
- * @param originator new originator
+ * @param new_originator new originator
  */
 static void
 _set_originator(int af_type, struct netaddr *setting, const struct netaddr *new_originator) {

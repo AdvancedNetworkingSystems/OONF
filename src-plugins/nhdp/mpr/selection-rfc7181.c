@@ -77,9 +77,8 @@ static unsigned int _calculate_r(const struct nhdp_domain *domain,
  * direct link that has a lower metric cost than the two-hop path (so
  * it should  be covered by an MPR node).
  * 
- * @param set_n1 N1 Set
- * @param set_n2 N2 Set
- * @return 
+ * @param domain NHDP domain
+ * @param graph neighbor graph instance
  */
 static void
 _calculate_n(const struct nhdp_domain *domain, struct neighbor_graph *graph) {
@@ -125,8 +124,10 @@ _calculate_n(const struct nhdp_domain *domain, struct neighbor_graph *graph) {
  * z in N1, and no such minimal values have z in M.
  * 
  * TODO Clean up code
- * 
- * @return 
+ * @param domain NHDP domain
+ * @param graph neighbor graph instance
+ * @param x_node node X
+ * @return see RFC
  */
 static unsigned int
 _calculate_r(const struct nhdp_domain *domain, struct neighbor_graph *graph,
@@ -194,7 +195,8 @@ _calculate_r(const struct nhdp_domain *domain, struct neighbor_graph *graph,
 
 /**
  * Add all elements x in N1 that have W(x) = WILL_ALWAYS to M.
- * @param current_mpr_data
+ * @param domain NHDP domain
+ * @param graph neighbor graph instance
  */
 static void
 _process_will_always(const struct nhdp_domain *domain, struct neighbor_graph *graph) {
@@ -220,7 +222,8 @@ _process_will_always(const struct nhdp_domain *domain, struct neighbor_graph *gr
 /**
  * For each element y in N for which there is only one element
  * x in N1 such that d2(x,y) is defined, add that element x to M.
- * @param current_mpr_data
+ * @param domain NHDP domain
+ * @param graph neighbor graph instance
  */
 static void
 _process_unique_mprs(const struct nhdp_domain *domain, struct neighbor_graph *graph) {
@@ -267,11 +270,9 @@ _process_unique_mprs(const struct nhdp_domain *domain, struct neighbor_graph *gr
 /**
  * Selects a subset of nodes from N1 which are maximum 
  * regarding a given property.
- * @param current_mpr_data
- * @param get_property
- * @param candidate_subset
- * @param subset_n1
- * @return 
+ * @param domain NHDP domain for MPR calculation
+ * @param graph neighbor graph instance
+ * @param get_property callback for querying neighbor graph data
  */
 static void
 _select_greatest_by_property(const struct nhdp_domain *domain,
@@ -349,7 +350,8 @@ _select_greatest_by_property(const struct nhdp_domain *domain,
 
 /**
  * While there exists any element x in N1 with R(x, M) > 0...
- * @param current_mpr_data
+ * @param domain NHDP domain
+ * @param graph neighbor graph instance
  */
 static void
 _process_remaining(const struct nhdp_domain *domain, struct neighbor_graph *graph) {
@@ -418,6 +420,8 @@ _process_remaining(const struct nhdp_domain *domain, struct neighbor_graph *grap
 
 /**
  * Calculate MPR
+ * @param domain NHDP domain
+ * @param graph neighbor graph instance
  */
 void
 mpr_calculate_mpr_rfc7181(const struct nhdp_domain *domain, struct neighbor_graph *graph) {
