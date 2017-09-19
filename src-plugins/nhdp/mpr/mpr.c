@@ -262,8 +262,8 @@ _validate_mpr_set(const struct nhdp_domain *domain, struct neighbor_graph *graph
   avl_for_each_element(&graph->set_n1, node_n1,
                        _avl_node)
   {
-     if (node_n1->link->flooding_willingness
-            == RFC7181_WILLINGNESS_ALWAYS) {
+     if (node_n1 && node_n1->link &&
+	 node_n1->link->flooding_willingness == RFC7181_WILLINGNESS_ALWAYS) {
       assert(mpr_is_mpr(graph, &node_n1->addr));
     }
   }
