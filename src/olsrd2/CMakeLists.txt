@@ -58,6 +58,7 @@ IF (NOT OONF_STATIC_PLUGINS)
                              auto_ll4
                              http
                              mpr
+			     constant_metric
                              remotecontrol
                              )
 ENDIF (NOT OONF_STATIC_PLUGINS)
